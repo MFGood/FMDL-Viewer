@@ -105,7 +105,7 @@ export async function scanExport(index, readText) {
   const portraitsByNumber = new Map();
   const portraitsDir = folder('Portraits');
   if (portraitsDir) for (const p of index.filesIn(portraitsDir)) {
-    const m = /^player_.{3}(\d{2})\.dds$/i.exec(fileOf(p));
+    const m = /^player_(?:[xX]{3})?(\d{2})\.dds$/i.exec(fileOf(p));
     if (m) portraitsByNumber.set(+m[1], p);
   }
 
