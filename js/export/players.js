@@ -71,7 +71,7 @@ export function modelsFor(p) {
 
 // Skin meshes reference skin_color_0.dds (or skin_color.dds); PES swaps in skin_color_1 … _6 for the
 // player's skin colour.
-const SKIN_TEXTURE = /^skin_colou?r(_\d+)?$/i;
+const SKIN_TEXTURE = /^skin_colou?r(_\d+)$/i;
 
 export const usesSkin = (ref) => SKIN_TEXTURE.test(stem(ref.filename));
 
