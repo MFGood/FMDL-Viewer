@@ -3,7 +3,7 @@
 View PES / Fox Engine `.fmdl` models and whole aesthetics exports in the browser. Everything runs on
 your machine; nothing you open is uploaded.
 
-To access a static hosted version of the tool, go to <https://fmdlviewer.github.io/>.
+To access a static hosted version of the tool, go to <https://mfgood.github.io/FMDL-Viewer>.
 
 ## Running it locally
 
