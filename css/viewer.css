@@ -1,0 +1,552 @@
+/* viewer.css — styles for the FMDL viewer. */
+
+/* Layout: one-screen tool. Team roster on the left (when an export is open), viewport in the middle,
+   model details on the right; everything stacks under the viewport on phones. */
+
+:root {
+  --bg: #eef0ee;
+  --panel: #f8f9f7;
+  --line: #d3d8d2;
+  --fg: #1d2420;
+  --muted: #5d6a62;
+  --accent: #1f8a4c;
+  --accent-ink: #ffffff;
+  --accent-soft: #dcefe3;
+  --viewport: #dfe4df;
+  --warn: #a1610b;
+  --display: "Barlow Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121614;
+    --panel: #181d1a;
+    --line: #2b332e;
+    --fg: #e3e9e4;
+    --muted: #8e9b93;
+    --accent: #3fbf73;
+    --accent-ink: #08130c;
+    --accent-soft: #1b3324;
+    --viewport: #0d100e;
+    --warn: #e0a24a;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme="dark"] {
+  --bg: #121614;
+  --panel: #181d1a;
+  --line: #2b332e;
+  --fg: #e3e9e4;
+  --muted: #8e9b93;
+  --accent: #3fbf73;
+  --accent-ink: #08130c;
+  --accent-soft: #1b3324;
+  --viewport: #0d100e;
+  --warn: #e0a24a;
+  color-scheme: dark;
+}
+
+html, body {
+  height: 100%;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font: 15px/1.45 var(--body);
+  display: flex;
+  flex-direction: column;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+h1 {
+  font: 700 20px/1 var(--display);
+  letter-spacing: .02em;
+  margin: 0;
+}
+
+h1 span {
+  color: var(--accent);
+}
+
+.file {
+  font: 13px var(--mono);
+  color: var(--muted);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 120px;
+}
+
+button, .btn {
+  font: 500 14px var(--body);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  position: relative;
+}
+
+button:hover, .btn:hover {
+  border-color: var(--accent);
+}
+
+button:disabled {
+  opacity: .45;
+  cursor: default;
+}
+
+button:disabled:hover {
+  border-color: var(--line);
+}
+
+button:focus-visible, .btn:focus-within, input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.btn input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}
+
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  min-height: 0;
+}
+
+main.has-team {
+  grid-template-columns: 270px 1fr 300px;
+}
+
+aside {
+  background: var(--panel);
+  overflow: auto;
+  padding-block: 14px;
+  padding-inline: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
+}
+
+#details {
+  border-left: 1px solid var(--line);
+}
+
+#team {
+  border-right: 1px solid var(--line);
+  padding-inline: 0;
+  gap: 0;
+}
+
+h2 {
+  font: 700 13px var(--display);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+
+.stat b {
+  display: block;
+  font: 500 20px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat small {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+.toggles {
+  display: grid;
+  gap: 6px;
+}
+
+label.chk {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+  min-width: 0;
+}
+
+input[type=checkbox] {
+  accent-color: var(--accent);
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  flex: none;
+}
+
+ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.tree ul {
+  padding-left: 16px;
+  border-left: 1px solid var(--line);
+  margin-left: 7px;
+}
+
+.tree li {
+  padding: 2px 0;
+}
+
+.tree > ul > li > label {
+  font-weight: 500;
+}
+
+.mesh {
+  font: 12.5px var(--mono);
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.model-h {
+  font: 700 13px var(--display);
+  letter-spacing: .04em;
+  margin: 10px 0 2px;
+  word-break: break-all;
+}
+
+.model-h:first-child {
+  margin-top: 0;
+}
+
+.mat {
+  padding: 6px 0;
+  border-top: 1px solid var(--line);
+  font-size: 13.5px;
+}
+
+.mat code {
+  font: 12px var(--mono);
+  color: var(--muted);
+  word-break: break-all;
+}
+
+.tex {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+  font: 12px var(--mono);
+  word-break: break-all;
+}
+
+.tex .dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--line);
+}
+
+.tex.used.ok .dot {
+  background: var(--accent);
+}
+
+.tex.used.missing .dot {
+  background: var(--warn);
+}
+
+.kits {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.kit {
+  font: 500 13px var(--mono);
+  padding: 5px 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.kit.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+kbd {
+  font: 12px var(--mono);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 0 4px;
+  background: var(--bg);
+}
+
+.linkish {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--accent);
+  text-decoration: underline;
+  font: inherit;
+  cursor: pointer;
+}
+
+.hint {
+  font-size: 13px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* team roster */
+.team-head {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 4px 16px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.crest {
+  width: 56px;
+  height: 56px;
+  flex: none;
+  object-fit: contain;
+  image-rendering: auto;
+}
+
+.crest.blank {
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+}
+
+.team-name {
+  font: 700 24px/1.05 var(--display);
+  letter-spacing: .01em;
+  margin: 0;
+  word-break: break-word;
+  text-wrap: balance;
+}
+
+.team-meta {
+  font: 12px var(--mono);
+  color: var(--muted);
+  margin-top: 4px;
+}
+
+.roster {
+  display: flex;
+  flex-direction: column;
+  padding-block: 6px;
+}
+
+.player {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 6px 16px;
+  border-left: 3px solid transparent;
+}
+
+button.player:hover {
+  background: var(--bg);
+}
+
+.player.on {
+  background: var(--accent-soft);
+  border-left-color: var(--accent);
+}
+
+.player.static {
+  opacity: .72;
+  cursor: default;
+}
+
+.thumb {
+  width: 44px;
+  height: 44px;
+  border-radius: 6px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  object-fit: cover;
+  display: grid;
+  place-items: center;
+  font: 500 14px var(--mono);
+  color: var(--muted);
+  overflow: hidden;
+}
+
+.pname {
+  font-weight: 500;
+  line-height: 1.2;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pname .num {
+  font: 12px var(--mono);
+  color: var(--muted);
+  margin-right: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pmeta {
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.roster-h {
+  padding: 12px 16px 4px;
+}
+
+.roster-hint {
+  padding: 0 16px 4px;
+  font-size: 12.5px;
+}
+
+#stage {
+  position: relative;
+  background: var(--viewport);
+  min-height: 0;
+  min-width: 0;
+}
+
+#stage canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+}
+
+#drop {
+  position: absolute;
+  inset: 12px;
+  border: 2px dashed var(--accent);
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  text-align: center;
+  padding: 16px;
+  font: 700 22px var(--display);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--viewport) 80%, transparent);
+  pointer-events: none;
+}
+
+#help {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font: 12px var(--mono);
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Messages stack in the viewport's top-right corner, clear of the controls hint at the bottom. */
+#notices {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  max-width: min(420px, calc(100% - 24px));
+  pointer-events: none;
+}
+
+#notices > * {
+  pointer-events: auto;
+}
+
+#status {
+  font: 12px var(--mono);
+  color: var(--fg);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: 4px 8px;
+  overflow-wrap: anywhere;
+}
+
+#err {
+  position: relative;
+  padding: 10px 36px 10px 12px;
+  background: var(--panel);
+  border: 1px solid var(--warn);
+  border-radius: 8px;
+  color: var(--fg);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+#err button {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  padding: 2px 8px;
+}
+
+@media (max-width: 1000px) {
+  main, main.has-team {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(320px, 58vh) auto auto;
+    overflow: auto;
+  }
+  #stage {
+    order: -1;
+  }
+  aside {
+    overflow: visible;
+  }
+  #details {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+  }
+  #team {
+    border-right: 0;
+    border-top: 1px solid var(--line);
+  }
+}

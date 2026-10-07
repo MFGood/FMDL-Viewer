@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>FMDL Viewer</title>
+  <meta name="description" content="View PES / Fox Engine .fmdl models and aesthetics exports in the browser.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
+  <link rel="stylesheet" href="css/viewer.css">
+  <script type="importmap">
+  { "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  } }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+<header>
+  <h1>FMDL<span>/</span>viewer</h1>
+  <div class="file" id="fileName">sample.fmdl (example)</div>
+  <label class="btn primary" for="fileInput">Open files…<input id="fileInput" type="file" multiple accept=".fmdl,.dds,.ftex,.zip,.7z,.rar"></label>
+  <label class="btn" for="folderInput">Open export folder…<input id="folderInput" type="file" webkitdirectory multiple></label>
+  <button id="reload" type="button" disabled title="Re-read the files you opened (R)">Reload</button>
+  <button id="resetView" type="button">Frame model</button>
+</header>
+<main id="main">
+  <aside id="team" hidden>
+    <div class="team-head">
+      <img class="crest" id="crest" alt="" hidden>
+      <div class="crest blank" id="crestBlank"></div>
+      <div>
+        <p class="team-name" id="teamName">Team</p>
+        <div class="team-meta" id="teamMeta"></div>
+      </div>
+    </div>
+    <h2 class="roster-h">Players</h2>
+    <p class="hint roster-hint"><kbd>Ctrl</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> for the previous / next player</p>
+    <div class="roster" id="roster"></div>
+  </aside>
+  <div id="stage">
+    <div id="drop" hidden>Drop an aesthetics export (.zip, .7z, .rar or folder)<br>or .fmdl / .dds / .ftex files</div>
+    <div id="notices">
+      <div id="status" role="status" hidden></div>
+      <div id="err" role="alert" hidden><span id="errText"></span><button type="button" id="errClose" aria-label="Dismiss">×</button></div>
+    </div>
+    <div id="help">drag / arrows: rotate · right-drag / shift-drag / alt+arrows: pan · wheel / pinch / shift+↑↓: zoom</div>
+  </div>
+  <aside id="details">
+    <section>
+      <div class="stats">
+        <div class="stat"><b id="sVerts">0</b><small>Vertices</small></div>
+        <div class="stat"><b id="sTris">0</b><small>Triangles</small></div>
+        <div class="stat"><b id="sMeshes">0</b><small>Meshes</small></div>
+      </div>
+    </section>
+    <section id="kitSection" hidden>
+      <h2>Kits</h2>
+      <div class="kits" id="kits"></div>
+      <p class="hint"><kbd>Ctrl</kbd> + <kbd>←</kbd> / <kbd>→</kbd> for the previous / next kit</p>
+    </section>
+    <section id="playerSection" hidden>
+      <h2>This player</h2>
+      <div class="toggles">
+        <label class="chk"><input type="checkbox" id="tPlayerDefaults"> Default boots and hands</label>
+      </div>
+      <p class="hint" id="playerDefaultsNote"></p>
+    </section>
+    <section id="skinSection" hidden>
+      <h2>Skin colour</h2>
+      <div class="kits" id="skins"></div>
+    </section>
+    <section>
+      <h2>Display</h2>
+      <div class="toggles">
+        <label class="chk"><input type="checkbox" id="tTex" checked> Textures</label>
+        <label class="chk" title="Players in an export with no boots or gloves model get the default PES body and hands."><input type="checkbox" id="tDefaults" checked> Default boots and hands</label>
+        <label class="chk"><input type="checkbox" id="tWire"> Wireframe</label>
+        <label class="chk"><input type="checkbox" id="tBack"> Back faces</label>
+        <label class="chk"><input type="checkbox" id="tBox"> Bounding boxes</label>
+        <label class="chk"><input type="checkbox" id="tBones"> Bone positions</label>
+        <label class="chk"><input type="checkbox" id="tAnim" checked> Animate UV scroll / step</label>
+        <label class="chk" title="A simple run cycle on the full PES skeleton, to see how the model's weights deform."><input type="checkbox" id="tRun"> Run animation</label>
+        <label class="chk"><input type="checkbox" id="tGrid" checked> Ground grid</label>
+        <label class="chk" title="Stray meshes are pieces of geometry well away from the rest of the model. They're always drawn; unticked, framing leaves them out."><input type="checkbox" id="tStray" checked> Frame stray meshes <span id="strayCount"></span></label>
+        <label class="chk"><input type="checkbox" id="tBlur"> Hidden meshes (anti-blur, invisible)</label>
+        <label class="chk" title="As in PES, a vertex whose bone weights total less or more than 1 is pulled toward or pushed away from the origin; with no weight it sits at the origin."><input type="checkbox" id="tWeight" checked> PES weight scaling</label>
+      </div>
+    </section>
+    <section>
+      <h2>Models</h2>
+      <div class="tree" id="tree"></div>
+    </section>
+    <section>
+      <h2>Materials</h2>
+      <div id="mats"></div>
+      <p class="hint">Green dot: texture found. Amber: missing. Grey: not drawn by the viewer (normal and specular maps).</p>
+    </section>
+  </aside>
+</main>
+</body>
+</html>

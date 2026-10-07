@@ -1,0 +1,118 @@
+// main.js — starts the viewer: hooks up the page's controls, keyboard and drag-and-drop, and runs the
+// render loop.
+
+import * as THREE from 'three';
+import { $, isTyping } from './core/dom.js';
+import { initNotices } from './core/notices.js';
+import { options, bindOptions } from './core/options.js';
+import { state } from './core/state.js';
+import { viewedPlayer, settingsOf, setSetting } from './export/players.js';
+import { kitsAvailable } from './export/texture-lookup.js';
+import { stage, controls, boxLayer, boneLayer, makeGrid, showGrid, resize, render } from './scene/stage.js';
+import { frameModel } from './scene/framing.js';
+import { initKeyboardCamera, updateKeyboardCamera } from './scene/keyboard-camera.js';
+import { updateUvAnimations } from './scene/materials.js';
+import { followRig } from './scene/overlays.js';
+import { running, poseRun, currentRig } from './animation/rig.js';
+import {
+  refreshMaterials, applyVisibility, applyWireframe, applyWeightOption, applyRunOption, applyTheme, stepKit,
+} from './viewer.js';
+import { renderTeam, playablePlayers, stepPlayer, reloadForDefaults } from './ui/team.js';
+import { renderPlayerPanel } from './ui/details.js';
+import { openBatch, reload, canReload, openSample } from './open/opening.js';
+import { pickedBatch, droppedBatch } from './open/gather.js';
+
+initNotices();
+makeGrid();
+
+// ---------------------------------------------------------------- display options
+
+bindOptions({
+  textures: refreshMaterials,
+  backFaces: refreshMaterials,
+  wireframe: applyWireframe,
+  boundingBoxes: () => (boxLayer.visible = options.boundingBoxes),
+  bones: () => (boneLayer.visible = options.bones),
+  grid: () => showGrid(options.grid),
+  hiddenMeshes: applyVisibility,
+  frameStray: frameModel,
+  weightScaling: applyWeightOption,
+  run: applyRunOption,
+  defaultModels: async () => {
+    if (!state.aet) return;
+    const player = viewedPlayer();
+    if (player && settingsOf(player).useDefaults != null) { // their own setting wins
+      await renderTeam();
+      renderPlayerPanel();
+      return;
+    }
+    await reloadForDefaults();
+  },
+});
+
+$('tPlayerDefaults').addEventListener('change', async () => {
+  const player = viewedPlayer();
+  if (!player) return;
+  setSetting(player, 'useDefaults', $('tPlayerDefaults').checked);
+  await reloadForDefaults();
+});
+
+// ---------------------------------------------------------------- buttons and keys
+
+const openPicked = (input) => { openBatch(pickedBatch(input.files)); input.value = ''; };
+$('fileInput').addEventListener('change', (e) => openPicked(e.target));
+$('folderInput').addEventListener('change', (e) => openPicked(e.target));
+$('reload').addEventListener('click', reload);
+$('resetView').addEventListener('click', frameModel);
+
+addEventListener('keydown', (e) => {
+  if (isTyping(e.target)) return;
+  // Ctrl + arrows (Cmd on a Mac, where the system takes Ctrl + arrows):
+  // Up / Down = previous / next player, Left / Right = previous / next kit.
+  if ((e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey) {
+    if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+      if (playablePlayers().length) { e.preventDefault(); stepPlayer(e.key === 'ArrowUp' ? -1 : 1); }
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if (kitsAvailable().length > 1) { e.preventDefault(); stepKit(e.key === 'ArrowLeft' ? -1 : 1); }
+    }
+    return;
+  }
+  if (e.metaKey || e.ctrlKey || e.altKey) return;
+  if (e.key.toLowerCase() === 'r' && canReload()) reload();
+});
+initKeyboardCamera();
+
+// ---------------------------------------------------------------- drag and drop
+
+let dragDepth = 0;
+addEventListener('dragenter', (e) => { e.preventDefault(); dragDepth++; $('drop').hidden = false; });
+addEventListener('dragleave', () => { if (--dragDepth <= 0) { dragDepth = 0; $('drop').hidden = true; } });
+addEventListener('dragover', (e) => e.preventDefault());
+addEventListener('drop', (e) => {
+  e.preventDefault();
+  dragDepth = 0;
+  $('drop').hidden = true;
+  droppedBatch(e.dataTransfer).then(openBatch);
+});
+
+// ---------------------------------------------------------------- theme, size and drawing
+
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { makeGrid(); applyTheme(); });
+new ResizeObserver(resize).observe(stage);
+resize();
+
+const clock = new THREE.Clock();
+let lastFrame = 0;
+function loop() {
+  const now = clock.getElapsedTime(), dt = Math.min(0.1, now - lastFrame);
+  lastFrame = now;
+  updateKeyboardCamera(dt);
+  controls.update();
+  updateUvAnimations(now);
+  if (running()) { poseRun(now); followRig(currentRig()); }
+  render();
+  requestAnimationFrame(loop);
+}
+loop();
+
+openSample();
