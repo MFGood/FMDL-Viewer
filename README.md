@@ -3,7 +3,9 @@
 View PES / Fox Engine `.fmdl` models and whole aesthetics exports in the browser. Everything runs on
 your machine; nothing you open is uploaded.
 
-## Running it
+To access a static hosted version of the tool, go to <https://fmdlviewer.github.io/>.
+
+## Running it locally
 
 The viewer is a static site. Browsers won't run JavaScript modules or workers from a page opened straight
 from disk (`file://`), so serve the folder instead:
@@ -13,9 +15,6 @@ python -m http.server 8000
 ```
 
 then open <http://localhost:8000>.
-
-To publish on GitHub Pages, push this folder to a repository and turn on Pages for its branch
-(Settings → Pages → Deploy from a branch, root folder).
 
 ## Layout
 
