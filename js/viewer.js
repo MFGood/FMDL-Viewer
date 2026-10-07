@@ -65,6 +65,9 @@ function addModel({ path, parsed }, player) {
   };
   for (const mesh of parsed.meshes) {
     const obj = new THREE.Mesh(buildGeometry(mesh), new THREE.MeshStandardMaterial({ color: 0xb9c4bd }));
+    // Draw in file order, like the game, so a blended mesh layered over another comes after it rather than
+    // being depth-sorted. Negative so the bone overlays (render order 0–3) still draw last.
+    obj.renderOrder = mesh.index - parsed.meshes.length;
     obj.userData.antiblur = mesh.extensionHeaders.has('is-antiblur-meshes');
     // Shadow flag 0x2 = invisible (shadow-only) mesh; a hidden mesh group hides its meshes too.
     obj.userData.invisible = !!(mesh.shadowFlags & 0x2) || !!(mesh.group && !mesh.group.visible);

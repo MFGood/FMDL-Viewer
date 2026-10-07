@@ -120,6 +120,7 @@ function makeSkinned(m) {
   skinned.bind(rig.skeleton, new THREE.Matrix4());
   skinned.frustumCulled = false; // bounds move with the pose
   skinned.userData = m.obj.userData;
+  skinned.renderOrder = m.obj.renderOrder;
   m.model.group.add(skinned);
   return skinned;
 }
