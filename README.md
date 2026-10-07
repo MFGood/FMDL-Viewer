@@ -11,7 +11,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Team view:** shows the team name and logo, and a player list with names and portraits taken from the Faces, Boots and Gloves folders. Each player's textures are matched to the right folders automatically.
 - **Reload:** press **R** to reload the export while keeping the current player, kit and camera, so you can preview changes as you make them.
 - **Materials:** shaders follow the Fox Engine materials, including unlit, glass, metallic, two-sided and transparent ones. UV scroll and UV step materials animate, including timing textures, so you get a quick preview of animation changes.
-- **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / dummy_kit style texture). The kit you pick stays selected as you move between players.
+- **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / `dummy_kit` style texture). The kit you pick stays selected as you move between players.
 - **Default models:** players with only a face model are shown with a default PES boots model and gloves. Skin color can be picked per player, and the defaults can be turned off globally or per player.
 - **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton, including the hem bones, so the shirt and shorts follow the legs.
 - **Display options:**
