@@ -5,6 +5,27 @@ your machine; nothing you open is uploaded.
 
 To access a static hosted version of the tool, go to <https://mfgood.github.io/FMDL-Viewer>.
 
+## Features
+
+- **Opening files:** load individual `.fmdl` models or an entire aesthetics export. Exports can be opened as a `.zip` without much trouble. Added `.rar` and `.7z` support but memory usage goes crazy once you drop one in. Opening a folder is the better way.
+- **Team view:** shows the team name and logo, and a player list with names and portraits taken from the Faces, Boots and Gloves folders. Each player's textures are matched to the right folders automatically.
+- **Reload:** press **R** to reload the export while keeping the current player, kit and camera, so you can preview changes as you make them.
+- **Materials:** shaders follow the Fox Engine materials, including unlit, glass, metallic, two-sided and transparent ones. UV scroll and UV step materials animate, including timing textures, so you get a quick preview of animation changes.
+- **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / dummy_kit style texture). The kit you pick stays selected as you move between players.
+- **Default models:** players with only a face model are shown with a default PES boots model and gloves. Skin color can be picked per player, and the defaults can be turned off globally or per player.
+- **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton, including the hem bones, so the shirt and shorts follow the legs.
+- **Display options:**
+  - Draw backfaces toggle
+  - Bone overlay
+  - Ground grid centered on the origin
+  - PES-style weight scaling (vertices whose weights don't add up to 1 get scaled towards or away from origin)
+  - Option to frame stray meshes within the viewport (useful for catching bits floating above/below the pitch)
+- **Controls:**
+  - **Mouse:** orbit, pan and zoom.
+  - **Arrows:** orbit. **Shift+↑/↓:** zoom. **Alt+arrows:** pan.
+  - **Ctrl+↑/↓:** previous/next player. **Ctrl+←/→:** previous/next kit.
+- **Textures:** reads DDS (including BC7), FTEX, PNG and JPG.
+
 ## Running it locally
 
 The viewer is a static site. Browsers won't run JavaScript modules or workers from a page opened straight
