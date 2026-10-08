@@ -9,7 +9,7 @@ import { state } from './core/state.js';
 import { $ } from './core/dom.js';
 import { parseFmdl } from './formats/fmdl.js';
 import { dirOf, fileOf } from './formats/aet.js';
-import { isDefaultModel, viewedPlayer, setSetting } from './export/players.js';
+import { isDefaultModel, viewedPlayer, setSetting, hiddenParts } from './export/players.js';
 import { pickCurrentKit, kitsAvailable } from './export/texture-lookup.js';
 import { scene, boxLayer, boneLayer } from './scene/stage.js';
 import { buildGeometry, applyWeightScaling } from './scene/geometry.js';
@@ -59,9 +59,11 @@ async function readModels(paths) {
 }
 
 function addModel({ path, parsed }, player) {
+  // Put back what was unticked in the model tree last time this model was shown for this player.
+  const hidden = hiddenParts(player, path);
   const model = {
     label: isDefaultModel(path) ? `${fileOf(path)} (default)` : fileOf(path),
-    path, ownDir: dirOf(path), player, parsed, group: new THREE.Group(), visible: true,
+    path, ownDir: dirOf(path), player, parsed, group: new THREE.Group(), visible: !hidden.model, hidden,
   };
   for (const mesh of parsed.meshes) {
     const obj = new THREE.Mesh(buildGeometry(mesh), new THREE.MeshStandardMaterial({ color: 0xb9c4bd }));
@@ -73,7 +75,7 @@ function addModel({ path, parsed }, player) {
     obj.userData.invisible = !!(mesh.shadowFlags & 0x2) || !!(mesh.group && !mesh.group.visible);
     obj.userData.hiddenByFile = obj.userData.antiblur || obj.userData.invisible;
     model.group.add(obj);
-    state.meshObjects.push({ mesh, obj, model, groupVisible: true, shown: true, skinned: null });
+    state.meshObjects.push({ mesh, obj, model, groupVisible: !hidden.meshes.has(mesh.index), shown: true, skinned: null });
   }
   scene.add(model.group);
   state.models.push(model);

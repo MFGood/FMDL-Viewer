@@ -44,17 +44,22 @@ export const viewedPlayer = () => (state.aet && state.activePlayer && !state.act
 
 // ---------------------------------------------------------------- which models a player shows
 
-/** Whether a player gets the default models: their own setting if they have one, else the global one. */
-export const defaultsOn = (p) => settingsOf(p).useDefaults ?? options.defaultModels;
+export const hasOwnBoots = (p) => !!p?.boots?.fmdls.length;
+
+/**
+ * Whether a player gets the default models: their own setting if they have one; else off for players with
+ * their own boots model, and the global setting for the rest.
+ */
+export const defaultsOn = (p) => settingsOf(p).useDefaults ?? (hasOwnBoots(p) ? false : options.defaultModels);
 
 /**
  * Which default models a player would get. Defaults complete a player's own models, so a player with none
- * (portrait only) gets nothing. The body is added when they have no boots model, and the hands only when
- * their own models are face models alone (no boots and no gloves).
+ * (portrait only) gets nothing. The body is added for any player with models, and the hands when they have
+ * a face model but no gloves.
  */
 export function defaultParts(p) {
   if (!p || p.collars) return { boots: false, hands: false };
-  const boots = !p.boots?.fmdls.length && !!(p.face?.fmdls.length || p.gloves?.fmdls.length);
+  const boots = !!(p.face?.fmdls.length || p.boots?.fmdls.length || p.gloves?.fmdls.length);
   return { boots, hands: boots && !p.gloves?.fmdls.length && !!p.face?.fmdls.length };
 }
 
@@ -77,6 +82,22 @@ export const usesSkin = (ref) => SKIN_TEXTURE.test(stem(ref.filename));
 
 /** The skin colour (1–7) chosen for a model's player, or for loose models when there's no player; null if none. */
 export const chosenSkin = (player) => (player ? settingsOf(player).skin : state.looseSkin) ?? null;
+
+// ---------------------------------------------------------------- hidden models and meshes
+
+// What's unticked in the model tree, by model path, so Reload and switching players keep it. Export
+// players keep theirs in their settings; loose models and Collars share one list for the session.
+const looseHidden = new Map();
+
+/** What's hidden of one model: { model, groups (mesh group indices), meshes (mesh indices) }. */
+export function hiddenParts(player, path) {
+  const own = player && !player.collars;
+  let all = own ? settingsOf(player).hidden : looseHidden;
+  if (!all) setSetting(player, 'hidden', (all = new Map()));
+  let parts = all.get(path);
+  if (!parts) all.set(path, (parts = { model: false, groups: new Set(), meshes: new Set() }));
+  return parts;
+}
 
 // ---------------------------------------------------------------- names in the roster
 

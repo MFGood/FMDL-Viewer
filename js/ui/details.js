@@ -4,7 +4,7 @@
 import { $, el, checkbox, buttonRow } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { fileOf, kitLabel } from '../formats/aet.js';
-import { viewedPlayer, defaultParts, defaultsOn, settingsOf, setSetting, usesSkin } from '../export/players.js';
+import { viewedPlayer, defaultParts, defaultsOn, hasOwnBoots, settingsOf, setSetting, usesSkin } from '../export/players.js';
 import { kitsAvailable, texturePath, skinFor, customSkinAvailable, CUSTOM_SKIN } from '../export/texture-lookup.js';
 import { classify, isUsedRole } from '../scene/materials.js';
 import { textureState } from '../scene/textures.js';
@@ -49,7 +49,7 @@ export function renderSkins() {
 /** "This player": default models for the viewed player, overriding the global setting. */
 export function renderPlayerPanel() {
   const player = viewedPlayer(), parts = defaultParts(player);
-  // Only players with models but no boots of their own can get defaults.
+  // Any player with models can get defaults; portrait-only players have nothing for them to complete.
   $('playerSection').hidden = !player || !parts.boots;
   if ($('playerSection').hidden) return;
   $('tPlayerDefaults').checked = defaultsOn(player);
@@ -57,7 +57,7 @@ export function renderPlayerPanel() {
   note.textContent = '';
   const what = parts.hands ? 'the default body and hands' : 'the default body (they have their own gloves or no face, so no default hands)';
   if (settingsOf(player).useDefaults == null) {
-    note.append(`Following the global setting. Shows ${what}.`);
+    note.append(hasOwnBoots(player) ? `Off: they have their own boots model. Turn on to add ${what}.` : `Following the global setting. Shows ${what}.`);
     return;
   }
   const reset = el('button', { type: 'button', class: 'linkish' }, 'Use global setting');
@@ -76,11 +76,20 @@ export function renderTree() {
   const top = el('ul');
   for (const model of state.models) {
     const meshesIn = (group) => state.meshObjects.filter((m) => m.model === model && m.mesh.group === group);
+    // Unticked groups and meshes are remembered in model.hidden, so they stay hidden next time.
+    const { hidden } = model, groupIndex = (g) => model.parsed.meshGroups.indexOf(g);
     const groupItem = (group) => {
       const item = el('li');
-      const { label } = checkbox(group.name || '(unnamed)', true, (on) => {
+      const { label } = checkbox(group.name || '(unnamed)', !hidden.groups.has(groupIndex(group)), (on) => {
         item.querySelectorAll('input[type=checkbox]').forEach((c) => (c.checked = on));
-        const setGroup = (g) => { meshesIn(g).forEach((m) => (m.groupVisible = on)); g.children.forEach(setGroup); };
+        const setGroup = (g) => {
+          if (on) hidden.groups.delete(groupIndex(g)); else hidden.groups.add(groupIndex(g));
+          for (const m of meshesIn(g)) {
+            m.groupVisible = on;
+            if (on) hidden.meshes.delete(m.mesh.index); else hidden.meshes.add(m.mesh.index);
+          }
+          g.children.forEach(setGroup);
+        };
         setGroup(group);
         applyVisibility();
       });
@@ -91,7 +100,7 @@ export function renderTree() {
       return item;
     };
     const item = el('li');
-    const { label } = checkbox(model.label, model.visible, (on) => { model.visible = on; applyVisibility(); });
+    const { label } = checkbox(model.label, model.visible, (on) => { model.visible = on; model.hidden.model = !on; applyVisibility(); });
     label.title = model.path;
     item.append(label);
     const roots = model.parsed.meshGroups.filter((g) => !g.parent);
