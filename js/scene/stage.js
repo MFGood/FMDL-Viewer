@@ -1,7 +1,6 @@
-// stage.js — the three.js renderer, scene, camera, lights and ground grid.
+// stage.js — the three.js renderer, scene, cameras, lights and ground grid.
 
 import * as THREE from 'three';
-import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { $, cssVar } from '../core/dom.js';
 import { options } from '../core/options.js';
@@ -14,15 +13,10 @@ renderer.outputColorSpace = THREE.SRGBColorSpace;
 stage.prepend(renderer.domElement);
 
 export const scene = new THREE.Scene();
-export const camera = new THREE.PerspectiveCamera(40, 1, 0.01, 1000);
-
-export const controls = new OrbitControls(camera, renderer.domElement);
-controls.enableDamping = true;
-controls.screenSpacePanning = true;
-// Shift + left-drag pans, like the right button.
-renderer.domElement.addEventListener('pointerdown', (e) => {
-  controls.mouseButtons.LEFT = e.shiftKey ? THREE.MOUSE.PAN : THREE.MOUSE.ROTATE;
-});
+export const perspectiveCamera = new THREE.PerspectiveCamera(40, 1, 0.01, 1000);
+export const orthographicCamera = new THREE.OrthographicCamera(-1, 1, 1, -1, -1000, 1000);
+/** The camera drawn with: one of the two above (navigation.js places both and picks one). */
+export let camera = perspectiveCamera;
 
 scene.add(new THREE.HemisphereLight(0xffffff, 0x445544, 1.4));
 // A neutral studio environment so metallic (GGX) and glass shaders have something to reflect.
@@ -30,7 +24,14 @@ scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnviron
 const keyLight = new THREE.DirectionalLight(0xffffff, 1.6);
 keyLight.position.set(1, 2, 3);
 camera.add(keyLight); // the key light moves with the camera
-scene.add(camera);
+scene.add(perspectiveCamera, orthographicCamera);
+
+/** Draw with this camera from now on. */
+export function useCamera(next) {
+  if (next === camera) return;
+  next.add(keyLight);
+  camera = next;
+}
 
 /** Bounding boxes, drawn in the scene. */
 export const boxLayer = new THREE.Group();
@@ -67,8 +68,8 @@ export function showGrid(on) { if (grid) grid.visible = on; }
 export function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   renderer.setSize(w, h, false);
-  camera.aspect = w / Math.max(h, 1);
-  camera.updateProjectionMatrix();
+  perspectiveCamera.aspect = w / Math.max(h, 1);
+  perspectiveCamera.updateProjectionMatrix();
   for (const m of lineMaterials) m.resolution.set(w, h);
 }
 

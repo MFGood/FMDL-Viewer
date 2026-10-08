@@ -45,7 +45,7 @@
       <div id="status" role="status" hidden></div>
       <div id="err" role="alert" hidden><span id="errText"></span><button type="button" id="errClose" aria-label="Dismiss">×</button></div>
     </div>
-    <div id="help">drag / arrows: rotate · right-drag / shift-drag / alt+arrows: pan · wheel / pinch / shift+↑↓: zoom</div>
+    <div id="help"></div>
   </div>
   <aside id="details">
     <section>
@@ -87,6 +87,16 @@
         <label class="chk"><input type="checkbox" id="tBlur"> Hidden meshes (anti-blur, invisible)</label>
         <label class="chk" title="As in PES, a vertex whose bone weights total less or more than 1 is pulled toward or pushed away from the origin; with no weight it sits at the origin."><input type="checkbox" id="tWeight" checked> PES weight scaling</label>
       </div>
+    </section>
+    <section>
+      <h2>Navigation</h2>
+      <div class="kits" id="navSchemes"></div>
+      <p class="hint">
+        <kbd>1</kbd> <kbd>3</kbd> <kbd>7</kbd> front / right / top (<kbd>Ctrl</kbd> for the opposite) ·
+        <kbd>5</kbd> perspective / orthographic · <kbd>9</kbd> turn around ·
+        <kbd>4</kbd> <kbd>6</kbd> <kbd>8</kbd> <kbd>2</kbd> orbit 15° ·
+        <kbd>.</kbd> frame model · <kbd>+</kbd> <kbd>−</kbd> zoom
+      </p>
     </section>
     <section>
       <h2>Models</h2>

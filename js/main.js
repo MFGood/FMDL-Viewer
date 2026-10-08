@@ -2,15 +2,16 @@
 // render loop.
 
 import * as THREE from 'three';
-import { $, isTyping } from './core/dom.js';
+import { $, isTyping, buttonRow } from './core/dom.js';
 import { initNotices } from './core/notices.js';
 import { options, bindOptions } from './core/options.js';
 import { state } from './core/state.js';
 import { viewedPlayer, settingsOf, setSetting } from './export/players.js';
 import { kitsAvailable } from './export/texture-lookup.js';
-import { stage, controls, boxLayer, boneLayer, makeGrid, showGrid, resize, render } from './scene/stage.js';
+import { stage, boxLayer, boneLayer, makeGrid, showGrid, resize, render } from './scene/stage.js';
 import { frameModel } from './scene/framing.js';
 import { initKeyboardCamera, updateKeyboardCamera } from './scene/keyboard-camera.js';
+import { navigationScheme, setNavigationScheme, updateNavigation } from './scene/navigation.js';
 import { updateUvAnimations } from './scene/materials.js';
 import { followRig } from './scene/overlays.js';
 import { running, poseRun, currentRig } from './animation/rig.js';
@@ -82,6 +83,21 @@ addEventListener('keydown', (e) => {
 });
 initKeyboardCamera();
 
+// ---------------------------------------------------------------- mouse navigation scheme
+
+const HELP = {
+  blender: 'middle-drag: orbit · shift+middle-drag: pan · ctrl+middle-drag / wheel: zoom · numpad: views',
+  classic: 'drag / arrows: rotate · right-drag / shift-drag / alt+arrows: pan · wheel / pinch / shift+↑↓: zoom',
+};
+function renderNavigation() {
+  const scheme = navigationScheme();
+  $('help').textContent = HELP[scheme];
+  buttonRow($('navSchemes'), [['blender', 'Blender'], ['classic', 'Classic']].map(([id, label]) => ({
+    label, on: scheme === id, onClick: () => { setNavigationScheme(id); renderNavigation(); },
+  })));
+}
+renderNavigation();
+
 // ---------------------------------------------------------------- drag and drop
 
 let dragDepth = 0;
@@ -107,7 +123,7 @@ function loop() {
   const now = clock.getElapsedTime(), dt = Math.min(0.1, now - lastFrame);
   lastFrame = now;
   updateKeyboardCamera(dt);
-  controls.update();
+  updateNavigation(dt);
   updateUvAnimations(now);
   if (running()) { poseRun(now); followRig(currentRig()); }
   render();

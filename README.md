@@ -21,7 +21,14 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
   - PES-style weight scaling (vertices whose weights don't add up to 1 get scaled towards or away from origin)
   - Option to frame stray meshes within the viewport (useful for catching bits floating above/below the pitch)
 - **Controls:**
-  - **Mouse:** orbit, pan and zoom.
+  - **Mouse (Blender, the default):** middle-drag orbits, Shift+middle-drag pans, Ctrl+middle-drag
+    (down = in) or the wheel zooms.
+  - **Mouse (Classic, picked under Navigation):** left-drag orbits, right-drag or Shift+left-drag pans,
+    the wheel or middle-drag zooms.
+  - **View keys (numpad or number row):** **1** / **Ctrl+1** front / back, **3** / **Ctrl+3** right / left,
+    **7** / **Ctrl+7** top / bottom, **5** perspective / orthographic, **9** turn 180° (top ↔ bottom from
+    those views), **4** / **6** orbit 15° around, **8** / **2** orbit 15° over, **.** frame the model keeping
+    the angle, **+** / **=** and **−** zoom.
   - **Arrows:** orbit. **Shift+↑/↓:** zoom. **Alt+arrows:** pan.
   - **Ctrl+↑/↓:** previous/next player. **Ctrl+←/→:** previous/next kit.
 - **Textures:** reads DDS (including BC7), FTEX, PNG and JPG.
@@ -65,8 +72,9 @@ js/
     textures.js            texture decoding cache and GPU textures
     materials.js           Fox Engine shaders, UV scroll / step and timing textures
     overlays.js            bounding boxes and bone overlay
+    navigation.js          the view, mouse / touch navigation (Blender and classic), smooth view moves
     framing.js             framing the model, stray meshes
-    keyboard-camera.js     arrow-key camera
+    keyboard-camera.js     arrow keys and Blender-style view keys
   animation/
     quat.js                vector / quaternion helpers
     run-cycle.js           procedural run cycle on the PES skeleton

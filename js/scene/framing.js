@@ -4,7 +4,8 @@
 import * as THREE from 'three';
 import { options } from '../core/options.js';
 import { state } from '../core/state.js';
-import { camera, controls } from './stage.js';
+import { stage } from './stage.js';
+import { FOV, view, goal, animateTo, setView } from './navigation.js';
 
 /**
  * Connected pieces of a mesh (triangles sharing vertices), each with its triangle count and bounds.
@@ -64,28 +65,53 @@ const shownMeshes = () => {
 /** Number of stray pieces among the meshes shown. */
 export const strayCount = () => (state.meshObjects.length ? mainBody(shownMeshes()).stray : 0);
 
-/** Point the camera at the shown meshes (leaving out stray pieces unless "Frame stray meshes" is on). */
-export function frameModel() {
+/** The box framing aims at: the shown meshes, leaving out stray pieces unless "Frame stray meshes" is on. */
+function framedBox() {
   const box = new THREE.Box3();
   if (!options.frameStray) box.copy(mainBody(shownMeshes()).box);
   else for (const m of shownMeshes()) { m.obj.geometry.computeBoundingBox(); box.union(m.obj.geometry.boundingBox); }
+  return box;
+}
+
+/** Distance from the box's centre that fits it in the viewport, at the normal field of view. */
+function fitDistance(box) {
+  const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1e-3);
+  const halfTan = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
+  const aspect = stage.clientWidth / Math.max(stage.clientHeight, 1);
+  const halfAngle = Math.atan(halfTan * Math.min(1, aspect)); // the narrower way, vertical or horizontal
+  // Orthographic shows what perspective shows at the target, so this fits it too.
+  return (radius / Math.sin(halfAngle)) * 1.05;
+}
+
+/** Point the camera at the shown meshes from the default angle, at once. */
+export function frameModel() {
+  const box = framedBox();
   if (box.isEmpty()) return;
-  const size = box.getSize(new THREE.Vector3()), center = box.getCenter(new THREE.Vector3());
-  const radius = Math.max(size.length() / 2, 1e-3);
-  const distance = (radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2))) * 1.05;
-  camera.near = distance / 200;
-  camera.far = Math.max(distance * 50, 60); // far enough for the whole grid
-  camera.updateProjectionMatrix();
-  camera.position.copy(center).add(new THREE.Vector3(0.55, 0.35, 1).normalize().multiplyScalar(distance));
-  controls.target.copy(center);
-  controls.update();
+  const dir = new THREE.Vector3(0.55, 0.35, 1).normalize();
+  setView({ target: box.getCenter(new THREE.Vector3()), distance: fitDistance(box), yaw: Math.atan2(dir.x, dir.z), pitch: -Math.asin(dir.y) });
+}
+
+/** Aim a view (as from goal()) at the shown meshes and back it off to fit them, keeping its angle. */
+export function frameView(to) {
+  const box = framedBox();
+  if (box.isEmpty()) return to;
+  to.target = box.getCenter(new THREE.Vector3());
+  to.distance = fitDistance(box);
+  return to;
+}
+
+/** Move smoothly to fit the shown meshes in view, keeping the camera's angle (pan and zoom only). */
+export const frameKeepingAngle = () => animateTo(frameView(goal()));
+
+/** The middle of the box framing aims at (leaving out stray meshes unless "Frame stray meshes" is on), or null. */
+export function framedCenter() {
+  const box = framedBox();
+  return box.isEmpty() ? null : box.getCenter(new THREE.Vector3());
 }
 
 /** The camera, to put back after a reload. */
-export const cameraView = () => ({ position: camera.position.clone(), target: controls.target.clone() });
+export const cameraView = () => goal();
 
-export function restoreCameraView(view) {
-  camera.position.copy(view.position);
-  controls.target.copy(view.target);
-  controls.update();
+export function restoreCameraView(saved) {
+  setView(saved);
 }
