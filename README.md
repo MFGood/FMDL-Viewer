@@ -22,7 +22,8 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
   - Option to frame stray meshes within the viewport (useful for catching bits floating above/below the pitch)
 - **Controls:**
   - **Mouse (Blender, the default):** middle-drag orbits, Shift+middle-drag pans, Ctrl+middle-drag
-    (down = in) or the wheel zooms.
+    (down = in) or the wheel zooms. Ctrl+wheel pans right / left, Shift+wheel pans up / down, and
+    Ctrl+Shift+wheel rolls the view 15° (up = clockwise).
   - **Mouse (Classic, picked under Navigation):** left-drag orbits, right-drag or Shift+left-drag pans,
     the wheel or middle-drag zooms.
   - **View keys (numpad or number row):** **1** / **Ctrl+1** front / back, **3** / **Ctrl+3** right / left,

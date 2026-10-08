@@ -1,7 +1,8 @@
 // navigation.js — the view (what the camera looks at, from where) and moving it with the mouse and touch.
 // Two mouse schemes:
 //   Blender (default): middle-drag orbits, Shift + middle-drag pans, Ctrl + middle-drag zooms smoothly
-//     (down = in), the wheel zooms in steps.
+//     (down = in), the wheel zooms in steps; Ctrl + wheel pans right / left, Shift + wheel pans up / down and
+//     Ctrl + Shift + wheel rolls 15° (up = clockwise), each a step at once.
 //   Classic: left-drag orbits, right-drag / Shift + left-drag pans, middle-drag / wheel zooms; orbit and pan
 //     glide to a stop.
 // Touch is the same in both: one finger orbits, two pinch to zoom and drag to pan.
@@ -14,20 +15,23 @@ export const FOV = 40;            // degrees, the perspective camera's vertical 
 const ORTHO_FOV = 1;              // perspective narrows to this on its way to orthographic, and back
 const ANIMATION_TIME = 0.25;      // seconds
 const ZOOM_STEP = 1.2;            // distance factor per wheel notch or zoom key (Blender scheme)
+const PAN_STEP = 0.1;             // view heights per Ctrl / Shift + wheel notch (Blender scheme)
+const ROLL_STEP = THREE.MathUtils.degToRad(15); // per Ctrl + Shift + wheel notch (Blender scheme)
 const HALF_TAN = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const QUARTER = Math.PI / 2;
 
 /**
  * The view. The camera turns `yaw` about the vertical axis, then `pitch` about its own horizontal axis, and
  * sits `distance` back from `target`: yaw 0 / pitch 0 is the front view (from +Z), yaw 90° the right view
- * (from +X), pitch −90° the top view. Pitch isn't limited, so past ±90° the view is upside down.
+ * (from +X), pitch −90° the top view. Pitch isn't limited, so past ±90° the view is upside down. `roll` then
+ * turns the camera about its line of sight (positive = anticlockwise as the camera sees it).
  * `ortho` blends perspective (0) into orthographic (1); orthographic shows what perspective shows at the target.
  */
-export const view = { target: new THREE.Vector3(0, 1, 0), yaw: 0, pitch: 0, distance: 3, ortho: 0 };
+export const view = { target: new THREE.Vector3(0, 1, 0), yaw: 0, pitch: 0, roll: 0, distance: 3, ortho: 0 };
 
 const copyView = (v) => ({ ...v, target: v.target.clone() });
 const wrapAngle = (a) => THREE.MathUtils.euclideanModulo(a + Math.PI, 2 * Math.PI) - Math.PI;
-const orientation = (v) => new THREE.Quaternion().setFromEuler(new THREE.Euler(v.pitch, v.yaw, 0, 'YXZ'));
+const orientation = (v) => new THREE.Quaternion().setFromEuler(new THREE.Euler(v.pitch, v.yaw, v.roll ?? 0, 'YXZ'));
 
 export const upsideDown = () => Math.abs(wrapAngle(view.pitch)) > QUARTER + 1e-6;
 
@@ -52,6 +56,7 @@ export const goal = () => copyView(animation ? animation.to : view);
 /** Move smoothly to `to` (a view, as from goal()). */
 export function animateTo(to) {
   to.pitch = wrapAngle(to.pitch);
+  to.roll = wrapAngle(to.roll ?? 0);
   animation = { from: copyView(view), to, t: 0 };
 }
 
@@ -60,6 +65,7 @@ export function finishAnimation() {
   if (!animation) return;
   Object.assign(view, copyView(animation.to));
   view.yaw = wrapAngle(view.yaw);
+  view.roll = wrapAngle(view.roll);
   animation = null;
 }
 
@@ -70,6 +76,7 @@ function stepAnimation(dt) {
   view.target.lerpVectors(from.target, to.target, k);
   view.yaw = from.yaw + (to.yaw - from.yaw) * k;
   view.pitch = from.pitch + (to.pitch - from.pitch) * k;
+  view.roll = from.roll + wrapAngle(to.roll - from.roll) * k;
   view.distance = from.distance * Math.pow(to.distance / from.distance, k);
   view.ortho = from.ortho + (to.ortho - from.ortho) * k;
   if (animation.t >= 1) finishAnimation();
@@ -92,6 +99,11 @@ export function pan(right, up) {
     .addScaledVector(new THREE.Vector3(0, 1, 0).applyQuaternion(q), up * height);
 }
 
+/** Turn the camera about its line of sight (positive = anticlockwise). */
+export function roll(angle) {
+  view.roll = wrapAngle(view.roll + angle);
+}
+
 /** Zoom: distance × factor (< 1 is in). */
 export function zoom(factor) {
   view.distance = THREE.MathUtils.clamp(view.distance * factor, 1e-3, 1e4);
@@ -106,6 +118,7 @@ export function setView(next) {
   glide.yaw = glide.pitch = glide.right = glide.up = 0;
   Object.assign(view, copyView({ ...view, ...next }));
   view.pitch = wrapAngle(view.pitch);
+  view.roll = wrapAngle(view.roll ?? 0);
 }
 
 // ---------------------------------------------------------------- placing the camera
@@ -156,6 +169,7 @@ const canvas = renderer.domElement;
 let drag = null;               // { mode: 'orbit' | 'pan' | 'zoom' | 'dolly', x, y, glides }
 const touches = new Map();     // pointerId → { x, y }
 let wheelRest = 0;             // wheel movement not yet a whole Blender-scheme step
+let wheelAction = null;        // what wheelRest is adding up to
 
 /** Apply a drag of dx, dy pixels. */
 function dragBy(mode, dx, dy, glides) {
@@ -230,14 +244,31 @@ const endPointer = (e) => {
 canvas.addEventListener('pointerup', endPointer);
 canvas.addEventListener('pointercancel', endPointer);
 
+/** One Blender-scheme wheel step, up (+1) or down (−1), for the modifier keys held. */
+const wheelActions = {
+  zoom: (up) => zoomStep(up),
+  panSide: (up) => pan(up * PAN_STEP, 0),    // Ctrl: up = right
+  panUpDown: (up) => pan(0, up * PAN_STEP),  // Shift: up = up
+  roll: (up) => roll(-up * ROLL_STEP),       // Ctrl + Shift: up = clockwise
+};
+
+function wheelActionFor(e) {
+  const ctrl = e.ctrlKey || e.metaKey;
+  return ctrl && e.shiftKey ? 'roll' : ctrl ? 'panSide' : e.shiftKey ? 'panUpDown' : 'zoom';
+}
+
 canvas.addEventListener('wheel', (e) => {
-  e.preventDefault();
+  e.preventDefault(); // also stops Ctrl + wheel zooming the page
   finishAnimation();
-  const delta = e.deltaY * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1);
+  // Browsers often turn Shift + wheel into a sideways scroll.
+  const raw = e.deltaY || (e.shiftKey ? e.deltaX : 0);
+  const delta = raw * (e.deltaMode === 1 ? 33 : e.deltaMode === 2 ? 800 : 1);
   if (!delta) return;
   if (scheme === 'classic') { zoom(Math.pow(0.95, -Math.sign(delta))); return; }
-  // Blender: whole steps. A mouse wheel notch is about 100; smaller amounts (touchpads) add up to one.
-  if (Math.abs(delta) >= 50) { wheelRest = 0; zoomStep(-Math.sign(delta)); return; }
+  // Blender: whole steps, at once. A mouse wheel notch is about 100; smaller amounts (touchpads) add up to one.
+  const action = wheelActionFor(e), step = wheelActions[action];
+  if (action !== wheelAction) { wheelAction = action; wheelRest = 0; }
+  if (Math.abs(delta) >= 50) { wheelRest = 0; step(-Math.sign(delta)); return; }
   wheelRest += delta;
-  while (Math.abs(wheelRest) >= 100) { zoomStep(-Math.sign(wheelRest)); wheelRest -= 100 * Math.sign(wheelRest); }
+  while (Math.abs(wheelRest) >= 100) { step(-Math.sign(wheelRest)); wheelRest -= 100 * Math.sign(wheelRest); }
 }, { passive: false });

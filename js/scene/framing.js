@@ -88,7 +88,7 @@ export function frameModel() {
   const box = framedBox();
   if (box.isEmpty()) return;
   const dir = new THREE.Vector3(0.55, 0.35, 1).normalize();
-  setView({ target: box.getCenter(new THREE.Vector3()), distance: fitDistance(box), yaw: Math.atan2(dir.x, dir.z), pitch: -Math.asin(dir.y) });
+  setView({ target: box.getCenter(new THREE.Vector3()), distance: fitDistance(box), yaw: Math.atan2(dir.x, dir.z), pitch: -Math.asin(dir.y), roll: 0 });
 }
 
 /** Aim a view (as from goal()) at the shown meshes and back it off to fit them, keeping its angle. */

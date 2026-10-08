@@ -17,11 +17,12 @@ let shift = false, alt = false;
 const STEP = THREE.MathUtils.degToRad(15);
 const QUARTER = Math.PI / 2;
 
-/** Head for this yaw / pitch the short way round, framing the model as the period key does. */
+/** Head for this yaw / pitch (unrolled) the short way round, framing the model as the period key does. */
 function turnTo(yaw, pitch) {
   const to = frameView(goal());
   to.yaw += THREE.MathUtils.euclideanModulo(yaw - to.yaw + Math.PI, 2 * Math.PI) - Math.PI;
   to.pitch = pitch;
+  to.roll = 0;
   animateTo(to);
 }
 

@@ -86,7 +86,7 @@ initKeyboardCamera();
 // ---------------------------------------------------------------- mouse navigation scheme
 
 const HELP = {
-  blender: 'middle-drag: orbit · shift+middle-drag: pan · ctrl+middle-drag / wheel: zoom · numpad: views',
+  blender: 'middle-drag: orbit · shift+middle-drag: pan · ctrl+middle-drag / wheel: zoom · ctrl / shift+wheel: pan · ctrl+shift+wheel: roll · numpad: views',
   classic: 'drag / arrows: rotate · right-drag / shift-drag / alt+arrows: pan · wheel / pinch / shift+↑↓: zoom',
 };
 function renderNavigation() {
