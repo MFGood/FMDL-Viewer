@@ -2365,7 +2365,7 @@ function modelsFor(p) {
 /* ---------- skin colour ---------- */
 // Skin meshes reference skin_color_0.dds (or skin_color.dds); PES swaps in skin_color_1 … _6 for the
 // player's skin colour. The selected one is looked up where the model's textures are, then in the defaults.
-const SKIN_RE = /^skin_colou?r(_\d+)?$/i;
+const SKIN_RE = /^skin_color\.dds$/i;
 let looseSkin = 1; // for models opened on their own; export players each keep their own (in playerSettings, from 1)
 const skinFor = (player) => (player ? settingsOf(player).skin ?? 1 : looseSkin);
 const viewedPlayer = () => (aet && activePlayer && !activePlayer.collars ? activePlayer : null);

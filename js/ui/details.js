@@ -4,8 +4,8 @@
 import { $, el, checkbox, buttonRow } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { fileOf, kitLabel } from '../formats/aet.js';
-import { viewedPlayer, defaultParts, defaultsOn, settingsOf, setSetting, usesSkin, skinFor } from '../export/players.js';
-import { kitsAvailable, texturePath } from '../export/texture-lookup.js';
+import { viewedPlayer, defaultParts, defaultsOn, settingsOf, setSetting, usesSkin } from '../export/players.js';
+import { kitsAvailable, texturePath, skinFor, customSkinAvailable, CUSTOM_SKIN } from '../export/texture-lookup.js';
 import { classify, isUsedRole } from '../scene/materials.js';
 import { textureState } from '../scene/textures.js';
 import { offWeightCount } from '../scene/geometry.js';
@@ -34,14 +34,16 @@ export function renderKits() {
   buttonRow($('kits'), kits.map((kit) => ({ label: kitLabel(kit), on: kit === state.currentKit, onClick: () => selectKit(kit) })));
 }
 
-/** Skin colours 1–6, shown when a loaded mesh uses a skin texture. */
+/** Skin colours 1–6 (plus 7 for a custom skin_color.dds), shown when a loaded mesh uses a skin texture. */
 export function renderSkins() {
   const used = state.meshObjects.some((m) => m.mesh.materialInstance.textures.some(([, ref]) => usesSkin(ref)));
   $('skinSection').hidden = !used;
   if (!used) { $('skins').textContent = ''; return; }
   const current = skinFor(viewedPlayer());
   const numbers = [1, 2, 3, 4, 5, 6];
-  buttonRow($('skins'), numbers.map((n) => ({ label: String(n), title: `skin_color_${n}`, on: n === current, onClick: () => selectSkin(n) })));
+  if (customSkinAvailable()) numbers.push(CUSTOM_SKIN);
+  const title = (n) => (n === CUSTOM_SKIN ? 'skin_color (custom)' : `skin_color_${n}`);
+  buttonRow($('skins'), numbers.map((n) => ({ label: String(n), title: title(n), on: n === current, onClick: () => selectSkin(n) })));
 }
 
 /** "This player": default models for the viewed player, overriding the global setting. */

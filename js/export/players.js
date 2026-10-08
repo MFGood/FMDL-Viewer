@@ -69,14 +69,14 @@ export function modelsFor(p) {
 
 // ---------------------------------------------------------------- skin colour
 
-// Skin meshes reference skin_color_0.dds (or skin_color.dds); PES swaps in skin_color_1 … _6 for the
-// player's skin colour.
-const SKIN_TEXTURE = /^skin_colou?r(_\d+)$/i;
+// Skin meshes reference skin_color_0.dds; PES swaps in skin_color_1 … _6 for the player's skin colour.
+// A skin_color.dds in the referenced folder is offered as a 7th, custom colour.
+const SKIN_TEXTURE = /^skin_color(_\d+)?$/i;
 
 export const usesSkin = (ref) => SKIN_TEXTURE.test(stem(ref.filename));
 
-/** Skin colour (1–6) for a model's player, or for loose models when there's no player. */
-export const skinFor = (player) => (player ? settingsOf(player).skin ?? 1 : state.looseSkin);
+/** The skin colour (1–7) chosen for a model's player, or for loose models when there's no player; null if none. */
+export const chosenSkin = (player) => (player ? settingsOf(player).skin : state.looseSkin) ?? null;
 
 // ---------------------------------------------------------------- names in the roster
 

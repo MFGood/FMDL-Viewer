@@ -13,8 +13,8 @@ export const state = {
   currentKit: null,
   /** The kit last picked; shown whenever the loaded model has it. */
   chosenKit: null,
-  /** Skin colour (1–6) for models opened on their own. Export players each keep their own. */
-  looseSkin: 1,
+  /** Skin colour (1–7) picked for models opened on their own, or null for the default. Export players each keep their own. */
+  looseSkin: null,
   /** While a reload is reopening things: { player, kit, camera } to put back. */
   pendingRestore: null,
 };
