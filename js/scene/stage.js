@@ -63,6 +63,11 @@ export function makeGrid() {
 
 export function showGrid(on) { if (grid) grid.visible = on; }
 
+// ---------------------------------------------------------------- background
+
+/** The viewport background: a CSS colour, or null for the theme's. */
+export function setBackground(color) { stage.style.background = color || ''; }
+
 // ---------------------------------------------------------------- size and drawing
 
 export function resize() {

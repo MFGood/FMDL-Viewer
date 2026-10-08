@@ -8,7 +8,7 @@ import { options, bindOptions } from './core/options.js';
 import { state } from './core/state.js';
 import { viewedPlayer, settingsOf, setSetting } from './export/players.js';
 import { kitsAvailable } from './export/texture-lookup.js';
-import { stage, boxLayer, boneLayer, makeGrid, showGrid, resize, render } from './scene/stage.js';
+import { stage, boxLayer, boneLayer, makeGrid, showGrid, setBackground, resize, render } from './scene/stage.js';
 import { frameModel } from './scene/framing.js';
 import { initKeyboardCamera, updateKeyboardCamera } from './scene/keyboard-camera.js';
 import { navigationScheme, setNavigationScheme, updateNavigation } from './scene/navigation.js';
@@ -112,6 +112,20 @@ addEventListener('drop', (e) => {
 });
 
 // ---------------------------------------------------------------- theme, size and drawing
+
+// Custom background colour, remembered in this browser. Picking a colour turns it on.
+try {
+  const saved = JSON.parse(localStorage.getItem('background') || 'null');
+  if (saved) { $('tBg').checked = !!saved.on; $('bgColor').value = saved.color; }
+} catch {}
+function applyBackground() {
+  const on = $('tBg').checked, color = $('bgColor').value;
+  setBackground(on ? color : null);
+  try { localStorage.setItem('background', JSON.stringify({ on, color })); } catch {}
+}
+$('tBg').addEventListener('change', applyBackground);
+$('bgColor').addEventListener('input', () => { $('tBg').checked = true; applyBackground(); });
+applyBackground();
 
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { makeGrid(); applyTheme(); });
 new ResizeObserver(resize).observe(stage);

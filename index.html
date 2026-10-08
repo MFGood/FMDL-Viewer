@@ -83,6 +83,10 @@
         <label class="chk"><input type="checkbox" id="tAnim" checked> Animate UV scroll / step</label>
         <label class="chk" title="A simple run cycle on the full PES skeleton, to see how the model's weights deform."><input type="checkbox" id="tRun"> Run animation</label>
         <label class="chk"><input type="checkbox" id="tGrid" checked> Ground grid</label>
+        <div class="chk-row">
+          <label class="chk"><input type="checkbox" id="tBg"> Custom background</label>
+          <input type="color" id="bgColor" value="#808080" aria-label="Background colour" title="Background colour">
+        </div>
         <label class="chk" title="Stray meshes are pieces of geometry well away from the rest of the model. They're always drawn; unticked, framing leaves them out."><input type="checkbox" id="tStray" checked> Frame stray meshes <span id="strayCount"></span></label>
         <label class="chk"><input type="checkbox" id="tBlur"> Hidden meshes (anti-blur, invisible)</label>
         <label class="chk" title="As in PES, a vertex whose bone weights total less or more than 1 is pulled toward or pushed away from the origin; with no weight it sits at the origin."><input type="checkbox" id="tWeight" checked> PES weight scaling</label>

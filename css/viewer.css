@@ -210,6 +210,23 @@ label.chk {
   min-width: 0;
 }
 
+.chk-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-width: 0;
+}
+
+input[type=color] {
+  width: 32px;
+  height: 20px;
+  padding: 0;
+  border: 1px solid var(--muted);
+  border-radius: 4px;
+  background: none;
+  cursor: pointer;
+}
+
 input[type=checkbox] {
   accent-color: var(--accent);
   width: 16px;
