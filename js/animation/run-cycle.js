@@ -5,7 +5,6 @@
 // legs are aimed in the pelvis's frame, arms in the chest's frame; feet and head keep a world-level orientation.
 
 import { qMul, qInv, qAxis, X, Y, norm, sub, qFromTo, qRotate, qSlerp, forwardKinematics } from './quat.js';
-import { hemPose } from './hem.js';
 
 /** Smoothstep from 0 at a to 1 at b. */
 const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
@@ -36,8 +35,7 @@ const LAND = 0.72, STANCE = 1 - LAND; // on the ground from LAND to toe-off at 1
 
 /**
  * Pose at time t (seconds) for skeleton `sk` = { name: { parent, pos:[x,y,z] } }.
- * Returns { local: Map(name -> quaternion [x,y,z,w] relative to parent), offsets: Map(name -> [x,y,z] added to
- * the bone's rest position, in its parent's frame), hipOffset: [x,y,z] }.
+ * Returns { local: Map(name -> quaternion [x,y,z,w] relative to parent), hipOffset: [x,y,z] }.
  */
 export function runPose(t, sk) {
   const PERIOD = 0.74; // seconds per stride (both legs)
@@ -45,7 +43,7 @@ export function runPose(t, sk) {
   const now = poseAt(cyc, sk);
   const table = heightTable(sk), f = cyc * table.length, i = Math.floor(f) % table.length;
   const y = table[i] + (table[(i + 1) % table.length] - table[i]) * (f - Math.floor(f));
-  return { local: now.local, offsets: now.offsets, hipOffset: [0, y, 0] };
+  return { local: now.local, hipOffset: [0, y, 0] };
 }
 
 // Body height over one stride, worked out once per skeleton. Raw: while a foot is down, its lowest
@@ -171,7 +169,6 @@ function poseAt(cyc, sk) {
     if (sk[`skh_thumb_mata_${side}`]) local.set(`skh_thumb_mata_${side}`, qMul(qAxis(mid || [0, -1, 0], sign * 0.35), thumbIn));
     curl(`skh_thumb_mcp_${side}`, 0.5); curl(`skh_thumb_pip_${side}`, 0.6);
   }
-  const offsets = hemPose(sk, local, world, pelvis);
   // How far the hips must move so the lowest sole point of each grounded foot touches the floor.
   const pose = forwardKinematics(sk, local);
   const height = (bone, point) => { const b = pose(bone); return b.p[1] + qRotate(b.q, sub(point, sk[bone].pos))[1]; };
@@ -182,5 +179,5 @@ function poseAt(cyc, sk) {
     const lowest = Math.min(height(`sk_foot_${side}`, HEEL(side)), height(toeBone, TOE_TIP(side)));
     ground = ground == null ? -lowest : Math.max(ground, -lowest);
   }
-  return { local, offsets, ground };
+  return { local, ground };
 }

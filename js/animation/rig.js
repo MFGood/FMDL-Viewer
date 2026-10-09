@@ -7,16 +7,19 @@ import { options } from '../core/options.js';
 import { state } from '../core/state.js';
 import { scene } from '../scene/stage.js';
 import { runPose } from './run-cycle.js';
+import { helperBoneMatrices } from './helper-bones.js';
 
 // The full PES skeleton (158 bones, root dsk_hip) from pes-fmdl-blender's PesSkeletonData.py, which took
 // the positions from PES's body / hand_l / hand_r / face .skl files: { name: { parent, pos: [x, y, z] } }.
 // Hand bones (skh_*) hang off sk_hand_l / sk_hand_r and face bones (skf_*) off sk_head, so gloves and
 // faces follow the body. Loaded the first time the run animation is turned on.
-let skeleton = null;
+// The bind orientations of the bones (from PES's body.skl) go with it, for the helper-bone drivers.
+let skeleton = null, bindFrames = null;
 let skeletonLoading = null;
 function loadSkeleton() {
-  skeletonLoading ||= fetchAsset('assets/pes-skeleton.json')
-    .then((buffer) => (skeleton = JSON.parse(new TextDecoder().decode(buffer))));
+  const json = (path) => fetchAsset(path).then((buffer) => JSON.parse(new TextDecoder().decode(buffer)));
+  skeletonLoading ||= Promise.all([json('assets/pes-skeleton.json'), json('assets/pes-bind-frames.json')])
+    .then(([sk, frames]) => { skeleton = sk; bindFrames = frames; });
   return skeletonLoading;
 }
 
@@ -66,8 +69,15 @@ function buildRig() {
   for (const model of state.models) for (const bone of model.parsed.bones) addModelBone(bone);
   scene.add(root);
   root.updateMatrixWorld(true);
+  const restWorld = new Map(Object.entries(skeleton).map(([name, d]) => [name, d.pos]));
+  // Helper bones move by how far the game's placement has moved from its placement at rest.
+  const helperRest = new Map([...helperBoneMatrices(bones, bindFrames, restWorld)].map(([name, m]) => {
+    const p = bones.get(name).getWorldPosition(new THREE.Vector3());
+    return [name, m.invert().multiply(new THREE.Matrix4().makeTranslation(p.x, p.y, p.z))];
+  }));
   rig = {
     root, bones, staticBone,
+    restWorld, helperRest,
     index: new Map(list.map((b, i) => [b, i])),
     skeleton: new THREE.Skeleton(list), // rest pose = these positions, identity rotations
     rest: new Map(list.map((b) => [b, b.position.clone()])),
@@ -157,14 +167,21 @@ export function applySkinWeights() {
 
 /** Pose the rig at time t (seconds). */
 export function poseRun(t) {
-  const { local, offsets, hipOffset } = runPose(t, skeleton);
+  const { local, hipOffset } = runPose(t, skeleton);
   for (const [name, q] of local) rig.bones.get(name)?.quaternion.set(q[0], q[1], q[2], q[3]);
-  // Shirt-hem and shorts bones also move (each panel swings about its own pivot).
-  for (const [name, o] of offsets) {
-    const bone = rig.bones.get(name);
-    if (bone) bone.position.copy(rig.rest.get(bone)).add(new THREE.Vector3(o[0], o[1], o[2]));
-  }
   const hip = rig.bones.get('dsk_hip');
   if (hip) hip.position.copy(rig.rest.get(hip)).add(new THREE.Vector3(...hipOffset));
   rig.root.updateMatrixWorld(true);
+  // Then the helper bones, as PES places them: each moves as the game's placement moves from rest (which
+  // may scale it unevenly), set as a fixed local matrix under its parent; parents are done before children.
+  const helpers = helperBoneMatrices(rig.bones, bindFrames, rig.restWorld);
+  for (const [name, m] of helpers) m.multiply(rig.helperRest.get(name));
+  const depth = (b) => (b.parent?.isBone ? 1 + depth(b.parent) : 0);
+  const inverse = new THREE.Matrix4();
+  for (const [name, world] of [...helpers].sort(([a], [b]) => depth(rig.bones.get(a)) - depth(rig.bones.get(b)))) {
+    const bone = rig.bones.get(name);
+    bone.matrixAutoUpdate = false;
+    bone.matrix.copy(inverse.copy(bone.parent.matrixWorld).invert().multiply(world));
+    bone.updateMatrixWorld(true);
+  }
 }

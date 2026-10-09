@@ -13,7 +13,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Materials:** shaders follow the Fox Engine materials, including unlit, glass, metallic, two-sided and transparent ones. UV scroll and UV step materials animate, including timing textures, so you get a quick preview of animation changes.
 - **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / `dummy_kit` style texture). The kit you pick stays selected as you move between players.
 - **Default models:** players with only a face model are shown with a default PES boots model and gloves. Skin color can be picked per player (a `skin_color.dds` next to the skin texture is offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player.
-- **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton, including the hem bones, so the shirt and shorts follow the legs.
+- **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton. The helper bones (shorts panels, sleeves, shoulders, collar, elbows, wrists) are placed the way PES places them, using driver formulas ported from the game, so kits deform as they do in game.
 - **Display options:**
   - Draw backfaces toggle
   - Bone overlay
@@ -79,7 +79,7 @@ js/
   animation/
     quat.js                vector / quaternion helpers
     run-cycle.js           procedural run cycle on the PES skeleton
-    hem.js                 shirt hem and shorts panels during the run
+    helper-bones.js        PES's helper-bone drivers (shorts, sleeves, shoulders, collar…), ported from the game
     rig.js                 skinned copies of the meshes, driven by the run cycle
   ui/
     details.js             right-hand panel: counts, kits, skin colour, model tree, materials
@@ -92,6 +92,7 @@ workers/sevenzip-worker.js 7-Zip extraction, off the main thread
 vendor/7zip/               7-Zip compiled to WebAssembly (loaded only for .7z / .rar)
 assets/
   pes-skeleton.json        full PES skeleton (loaded when the run animation is first turned on)
+  pes-bind-frames.json     bind orientations of the PES bones, for the helper-bone drivers
   defaults/                default body, hands and skin textures (loaded when a player needs them)
   sample/                  the example model shown at start-up
 ```
