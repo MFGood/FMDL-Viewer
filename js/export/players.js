@@ -10,16 +10,33 @@ import { stem } from '../formats/aet.js';
 /** Folder the default models are registered under in the virtual file system. */
 export const DEFAULTS = 'default models';
 
+/** Versions of the default models, picked under "Default models": id → button label. */
+export const DEFAULT_VERSIONS = { 17: 'PES 17', 21: 'PES 21' };
+
 /**
- * The default models and their textures, in assets/defaults/: a PES body without a head (boots.fmdl, with
- * kit, shoes and skin meshes) and hands (glove_l / glove_r.fmdl), with skin colours 1–6.
+ * The default models and their textures, in assets/defaults/: a PES body without a head (boots.<version>.fmdl,
+ * with kit, shoes and skin meshes) and hands (glove_l / glove_r.<version>.fmdl), with skin, thigh and arm
+ * textures in skin colours 1–6.
  */
 export const DEFAULT_FILES = [
-  'boots.fmdl', 'glove_l.fmdl', 'glove_r.fmdl', 'shoes_bsm.jpg',
-  'skin_color_1.jpg', 'skin_color_2.jpg', 'skin_color_3.jpg', 'skin_color_4.jpg', 'skin_color_5.jpg', 'skin_color_6.jpg',
+  ...Object.keys(DEFAULT_VERSIONS).flatMap((v) => [`boots.${v}.fmdl`, `glove_l.${v}.fmdl`, `glove_r.${v}.fmdl`]),
+  'shoes_bsm.jpg',
+  ...[1, 2, 3, 4, 5, 6].flatMap((n) => [`skin_color_${n}.jpg`, `thigh_${n}_bsm.jpg`, `arm_${n}_bsm.jpg`]),
 ];
 
 export const isDefaultModel = (path) => path.startsWith(`${DEFAULTS}/`);
+
+// Which version of the default models is used, remembered in this browser.
+let version = '21';
+try { const saved = localStorage.getItem('defaultModels'); if (saved in DEFAULT_VERSIONS) version = saved; } catch {}
+
+export const defaultVersion = () => version;
+export function setDefaultVersion(next) {
+  version = next;
+  try { localStorage.setItem('defaultModels', next); } catch {}
+}
+
+const defaultModel = (name) => `${DEFAULTS}/${name}.${version}.fmdl`;
 
 // ---------------------------------------------------------------- per-player settings
 
@@ -67,18 +84,26 @@ export function defaultParts(p) {
 export function modelsFor(p) {
   if (!p || p.collars || !defaultsOn(p)) return p?.fmdls || [];
   const parts = defaultParts(p), extra = [];
-  if (parts.boots) extra.push(`${DEFAULTS}/boots.fmdl`);
-  if (parts.hands) extra.push(`${DEFAULTS}/glove_l.fmdl`, `${DEFAULTS}/glove_r.fmdl`);
+  if (parts.boots) extra.push(defaultModel('boots'));
+  if (parts.hands) extra.push(defaultModel('glove_l'), defaultModel('glove_r'));
   return [...p.fmdls, ...extra];
 }
 
 // ---------------------------------------------------------------- skin colour
 
-// Skin meshes reference skin_color_0.dds; PES swaps in skin_color_1 … _6 for the player's skin colour.
-// A skin_color.dds in the referenced folder is offered as a 7th, custom colour.
-const SKIN_TEXTURE = /^skin_color(_\d+)?$/i;
+// Skin-coloured textures. Meshes reference skin_color(_0).dds, thigh_bsm.dds or arm_bsm.dds; PES swaps in
+// the player's skin colour (skin_color_1 … _6, thigh_1_bsm … _6, arm_1_bsm … _6). When the texture is found
+// as named in the referenced folder, it's offered as a 7th, custom colour.
+const SKIN_TEXTURES = [
+  { pattern: /^skin_color(_\d+)?$/i, custom: 'skin_color', numbered: (n) => `skin_color_${n}` },
+  { pattern: /^thigh(_\d+)?_bsm$/i, custom: 'thigh_bsm', numbered: (n) => `thigh_${n}_bsm` },
+  { pattern: /^arm(_\d+)?_bsm$/i, custom: 'arm_bsm', numbered: (n) => `arm_${n}_bsm` },
+];
 
-export const usesSkin = (ref) => SKIN_TEXTURE.test(stem(ref.filename));
+/** Which skin-coloured texture a reference is ({ custom, numbered(n) }), or null. */
+export const skinTexture = (ref) => SKIN_TEXTURES.find((t) => t.pattern.test(stem(ref.filename))) || null;
+
+export const usesSkin = (ref) => !!skinTexture(ref);
 
 /** The skin colour (1–7) chosen for a model's player, or for loose models when there's no player; null if none. */
 export const chosenSkin = (player) => (player ? settingsOf(player).skin : state.looseSkin) ?? null;

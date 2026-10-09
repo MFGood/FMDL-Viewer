@@ -16,7 +16,7 @@
 // frame instead, so it reads zero held straight out to the side.
 
 import * as THREE from 'three';
-import { qMul, qInv, qRotate } from './quat.js';
+import { qMul, qInv, qRotate, qSlerp } from './quat.js';
 
 const deg = (r) => (r * 180) / Math.PI, rad = (d) => (d * Math.PI) / 180;
 const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
@@ -63,8 +63,9 @@ for (const s of ['l', 'r']) Object.assign(ANIM_PARENT, {
 
 // Each handler gets the side, the joint it reads (`a`: angles, `q`: rotation) and up to two more (`b`, `c`),
 // and the driver's rest relation (R0, T0: the helper's bind transform in its source's frame; P: the source's
-// parent; q60: the source's bind rotation under that parent). It returns the helper's scale, rotation and
-// change of position in the source's frame, and optionally a new frame for the source (`base`).
+// parent; q60: the source's bind rotation under that parent; src: the source's rotation; qa: the joint read's
+// bind rotation under its parent). It returns the helper's scale, rotation and change of position in the
+// source's frame, and optionally a new frame for the source (`base`).
 const H = {
   // Shorts: the root follows the thigh's swing (not its twist) and stretches as the leg lifts.
   hemRoot(side, a, b, c, d) {
@@ -93,11 +94,13 @@ const H = {
   // Shirt: the belly bulges as the body bends forward over the hips.
   belly: (side, a, b, c, d) => ({ S: [1, clamp(1 - 0.009 * (0.7 * deg(a.a[2]) + deg(b.a[2])), 1, 2), 1], R: d.R0 }),
   // The shirt's bottom panels (PES 2017+). PES 2021 drives them from the thigh through dsk_pos_belly, the way
-  // the shorts' panels hang off dsk_hem, but that code is packed. As an approximation the root stays with the
-  // hips and hands the thigh's angles on, and the panels reuse the shorts' panel formulas.
+  // the shorts' panels hang off dsk_hem, but that code is packed. As an approximation the root swings with
+  // part of the thigh's swing (dsk_hem takes all of it; the shirt hangs looser and higher up) and hands the
+  // thigh's angles on, and the panels reuse the shorts' panel formulas.
   bellyRoot(side, a, b, c, d) {
+    const swing = qMul(qMul(d.qa, swingTwist(a.q).swing), qInv(d.qa)); // in the hips' frame
     const [x0, x1, x2] = splitAngles(a.q);
-    return { R: d.R0, write: { a: [x2, x0, x1], q: d.R0 } };
+    return { R: d.R0, base: qMul(d.src, qSlerp(ID, swing, 0.6)), write: { a: [x2, x0, x1], q: d.R0 } };
   },
   collar(side, a, b, c, d) {
     const [, ny, nz] = b.a, sh = deg(c.a[1]);
@@ -239,7 +242,11 @@ export function helperBoneMatrices(bones, bind, rest) {
     const R0 = qMul(qInv(bind[source]), bind[target]);
     const r = rest.get(target), rs = rest.get(source);
     const T0 = qRotate(qInv(bind[source]), [r[0] - rs[0], r[1] - rs[1], r[2] - rs[2]]);
-    const d = { R0, T0, P: P?.q ?? ID, q60: parent ? qMul(qInv(bind[parent]), bind[source]) : ID };
+    const readParent = ANIM_PARENT[read];
+    const d = {
+      R0, T0, P: P?.q ?? ID, q60: parent ? qMul(qInv(bind[parent]), bind[source]) : ID, src: src.q,
+      qa: readParent && bind[readParent] && bind[read] ? qMul(qInv(bind[readParent]), bind[read]) : ID, // the joint read's bind rotation under its parent
+    };
     const res = handler(side, a, joint(extra1) ?? { a: [0, 0, 0], q: ID }, joint(extra2) ?? { a: [0, 0, 0], q: ID }, d);
     const T = res.T ?? (res.dT ? T0.map((v, i) => v + res.dT[i]) : T0);
     const base = res.base ? trs(src.p, res.base) : src.m;

@@ -4,7 +4,10 @@
 import { $, el, checkbox, buttonRow } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { fileOf, kitLabel } from '../formats/aet.js';
-import { viewedPlayer, defaultParts, defaultsOn, hasOwnBoots, settingsOf, setSetting, usesSkin } from '../export/players.js';
+import {
+  viewedPlayer, defaultParts, defaultsOn, hasOwnBoots, settingsOf, setSetting, usesSkin,
+  isDefaultModel, DEFAULT_VERSIONS, defaultVersion, setDefaultVersion,
+} from '../export/players.js';
 import { kitsAvailable, texturePath, skinFor, customSkinAvailable, CUSTOM_SKIN } from '../export/texture-lookup.js';
 import { classify, isUsedRole } from '../scene/materials.js';
 import { textureState } from '../scene/textures.js';
@@ -34,7 +37,7 @@ export function renderKits() {
   buttonRow($('kits'), kits.map((kit) => ({ label: kitLabel(kit), on: kit === state.currentKit, onClick: () => selectKit(kit) })));
 }
 
-/** Skin colours 1–6 (plus 7 for a custom skin_color.dds), shown when a loaded mesh uses a skin texture. */
+/** Skin colours 1–6 (plus 7 for custom skin textures), shown when a loaded mesh uses a skin texture. */
 export function renderSkins() {
   const used = state.meshObjects.some((m) => m.mesh.materialInstance.textures.some(([, ref]) => usesSkin(ref)));
   $('skinSection').hidden = !used;
@@ -42,8 +45,23 @@ export function renderSkins() {
   const current = skinFor(viewedPlayer());
   const numbers = [1, 2, 3, 4, 5, 6];
   if (customSkinAvailable()) numbers.push(CUSTOM_SKIN);
-  const title = (n) => (n === CUSTOM_SKIN ? 'skin_color (custom)' : `skin_color_${n}`);
+  const title = (n) => (n === CUSTOM_SKIN ? 'custom skin textures' : `skin_color_${n}`);
   buttonRow($('skins'), numbers.map((n) => ({ label: String(n), title: title(n), on: n === current, onClick: () => selectSkin(n) })));
+}
+
+/** Which version of the default models to use, shown once one is loaded. */
+export function renderDefaultVersion() {
+  const shown = state.models.some((m) => isDefaultModel(m.path));
+  $('defaultVersionSection').hidden = !shown;
+  if (!shown) return;
+  const current = defaultVersion();
+  buttonRow($('defaultVersions'), Object.entries(DEFAULT_VERSIONS).map(([id, label]) => ({
+    label, on: id === current, onClick: async () => {
+      if (id === defaultVersion()) return;
+      setDefaultVersion(id);
+      await reloadForDefaults();
+    },
+  })));
 }
 
 /** "This player": default models for the viewed player, overriding the global setting. */
