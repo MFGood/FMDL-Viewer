@@ -13,8 +13,9 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Reload:** press **R** to reload the export while keeping the current player, kit and camera, so you can preview changes as you make them.
 - **Materials:** shaders follow the Fox Engine materials, including unlit, glass, metallic, two-sided and transparent ones. UV scroll and UV step materials animate, including timing textures, so you get a quick preview of animation changes.
 - **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / `dummy_kit` style texture). The kit you pick stays selected as you move between players.
-- **Default models:** players with only a face model are shown with a default PES boots model and gloves, from PES 17 or PES 21 (picked under Default models once they're shown; Pre-Fox players keep their own choice, PES 17 to start with). Skin color can be picked per player (`skin_color`, `thigh_bsm` and `arm_bsm` textures follow it; when they're found as named next to the model, they're offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player. For Pre-Fox players, an `oral_body.model`, `oral_boots.model` or `oral_kit.model` their face folder's `.xml` lists counts as their own body, and a `gloveL` / `gloveR` entry replaces just that default hand (an entry whose file is missing doesn't count).
+- **Default models:** players with only a face model are shown with a default PES boots model and gloves, from PES 17 or PES 21 (picked under Default models in the settings; Pre-Fox players keep their own choice, PES 17 to start with). Skin color can be picked per player (`skin_color`, `thigh_bsm` and `arm_bsm` textures follow it; when they're found as named next to the model, they're offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player. For Pre-Fox players, an `oral_body.model`, `oral_boots.model` or `oral_kit.model` their face folder's `.xml` lists counts as their own body, and a `gloveL` / `gloveR` entry replaces just that default hand (an entry whose file is missing doesn't count).
 - **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton. The helper bones (shorts panels, sleeves, shoulders, collar, elbows, wrists) are placed the way PES places them, using driver formulas ported from the game, so kits deform as they do in game.
+- **Settings:** the cog at the top right opens the global settings: display options, default models and navigation.
 - **Display options:**
   - Draw backfaces toggle
   - Bone overlay
@@ -25,7 +26,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
   - **Mouse (Blender, the default):** middle-drag orbits, Shift+middle-drag pans, Ctrl+middle-drag
     (down = in) or the wheel zooms. Ctrl+wheel pans right / left, Shift+wheel pans up / down, and
     Ctrl+Shift+wheel rolls the view 15° (up = clockwise).
-  - **Mouse (Classic, picked under Navigation):** left-drag orbits, right-drag or Shift+left-drag pans,
+  - **Mouse (Classic, picked under Navigation in the settings):** left-drag orbits, right-drag or Shift+left-drag pans,
     the wheel or middle-drag zooms.
   - **View keys (numpad or number row):** **1** / **Ctrl+1** front / back, **3** / **Ctrl+3** right / left,
     **7** / **Ctrl+7** top / bottom, **5** perspective / orthographic, **9** turn 180° (top ↔ bottom from
@@ -87,6 +88,7 @@ js/
   ui/
     details.js             right-hand panel: counts, kits, skin colour, model tree, materials
     team.js                left-hand panel: team, players, switching players
+    settings.js            settings panel (cog button): display options, default models, navigation
   open/
     gather.js              what was dropped or picked, as files
     archives.js            .zip (JSZip) and .7z / .rar (7-Zip) reading

@@ -5,8 +5,7 @@ import { $, el, checkbox, buttonRow } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { fileOf, kitLabel } from '../formats/aet.js';
 import {
-  viewedPlayer, defaultParts, defaultsOn, hasOwnBoots, settingsOf, setSetting, usesSkin,
-  isDefaultModel, DEFAULT_VERSIONS, defaultVersion, setDefaultVersion, isPreFox, defaultHandsLabel,
+  viewedPlayer, defaultParts, defaultsOn, hasOwnBoots, settingsOf, setSetting, usesSkin, defaultHandsLabel,
 } from '../export/players.js';
 import { kitsAvailable, texturePath, skinFor, customSkinAvailable, CUSTOM_SKIN } from '../export/texture-lookup.js';
 import { classify, isUsedRole } from '../scene/materials.js';
@@ -47,22 +46,6 @@ export function renderSkins() {
   if (customSkinAvailable()) numbers.push(CUSTOM_SKIN);
   const title = (n) => (n === CUSTOM_SKIN ? 'custom skin textures' : `skin_color_${n}`);
   buttonRow($('skins'), numbers.map((n) => ({ label: String(n), title: title(n), on: n === current, onClick: () => selectSkin(n) })));
-}
-
-/** Which version of the default models to use, shown once one is loaded. */
-export function renderDefaultVersion() {
-  const shown = state.models.some((m) => isDefaultModel(m.path));
-  $('defaultVersionSection').hidden = !shown;
-  if (!shown) return;
-  // Pre-Fox (.model) players keep their own choice, PES 17 to start with.
-  const prefox = isPreFox(state.models.map((m) => m.path)), current = defaultVersion(prefox);
-  buttonRow($('defaultVersions'), Object.entries(DEFAULT_VERSIONS).map(([id, label]) => ({
-    label, on: id === current, onClick: async () => {
-      if (id === defaultVersion(prefox)) return;
-      setDefaultVersion(id, prefox);
-      await reloadForDefaults();
-    },
-  })));
 }
 
 /** "This player": default models for the viewed player, overriding the global setting. */

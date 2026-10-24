@@ -20,7 +20,7 @@ import { loadTexture, isDecoded } from './scene/textures.js';
 import { buildBoxes, buildBones } from './scene/overlays.js';
 import { frameModel, restoreCameraView } from './scene/framing.js';
 import { startRun, stopRun, running, applySkinWeights } from './animation/rig.js';
-import { renderTree, renderMaterials, renderKits, renderSkins, renderPlayerPanel, renderDefaultVersion, renderStats } from './ui/details.js';
+import { renderTree, renderMaterials, renderKits, renderSkins, renderPlayerPanel, renderStats } from './ui/details.js';
 import { forgetFiles } from './open/opening.js';
 
 // ---------------------------------------------------------------- loading models
@@ -39,7 +39,7 @@ export function clearModels() {
 /** Show nothing (keeping the panels in step). */
 export function showNoModels() {
   clearModels();
-  renderTree(); renderMaterials(); renderKits(); renderDefaultVersion(); applyVisibility();
+  renderTree(); renderMaterials(); renderKits(); applyVisibility();
 }
 
 /**
@@ -119,7 +119,6 @@ export async function loadModels(paths, label, player = null, notes = []) {
   if (state.pendingRestore?.camera) restoreCameraView(state.pendingRestore.camera);
   else frameModel();
   renderPlayerPanel();
-  renderDefaultVersion();
   if (problems.length) showError(problems.join(' · '));
   else hideError();
   await refreshMaterials();

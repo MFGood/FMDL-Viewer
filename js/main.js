@@ -20,10 +20,12 @@ import {
 } from './viewer.js';
 import { renderTeam, playablePlayers, stepPlayer, reloadForDefaults } from './ui/team.js';
 import { renderPlayerPanel } from './ui/details.js';
+import { initSettings } from './ui/settings.js';
 import { openBatch, reload, canReload, openSample } from './open/opening.js';
 import { pickedBatch, droppedBatch } from './open/gather.js';
 
 initNotices();
+initSettings();
 makeGrid();
 
 // ---------------------------------------------------------------- display options
