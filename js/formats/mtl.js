@@ -78,21 +78,28 @@ export function parseMtl(text) {
  *
  * Each instance has `prefox`: { shader, states, missing }, and texture refs carry `baseDir` (the folder the
  * path points to) and `srgb` (from the sampler).
+ *
+ * `uniform`: the model is listed in its .xml as type="uniform". The game then draws every mesh with the
+ * kit's main texture, whatever the .mtl's DiffuseMap says (or with none there), so DiffuseMap becomes the
+ * selected kit's texture in Kit Textures, as dummy_kit does in .fmdl materials.
  */
-export function attachMaterials(parsed, mtl, mtlDir) {
+export function attachMaterials(parsed, mtl, mtlDir, { uniform = false } = {}) {
   const instances = new Map(), missing = [];
   const lower = mtl && new Map([...mtl.values()].map((m) => [m.name.toLowerCase(), m]));
+  const kitTexture = ['DiffuseMap', { filename: 'dummy_kit.dds', directory: '/Assets/pes16/model/character/uniform/texture/', srgb: true }];
   for (const name of parsed.materialNames) {
     const def = mtl && (mtl.get(name) || lower.get(name.toLowerCase()));
     if (!def) missing.push(name);
+    const textures = (def?.samplers || []).map((s) => {
+      const path = normPath(s.path.replace(/^\.\//, '')), dir = dirOf(path);
+      return [s.name, { filename: fileOf(path), directory: dir ? `./${dir}/` : './', baseDir: resolveRelative(mtlDir, dir), srgb: s.srgb }];
+    });
+    if (uniform) textures.splice(0, textures.length, kitTexture, ...textures.filter(([role]) => role.toLowerCase() !== 'diffusemap'));
     instances.set(name, {
       name,
       shader: def ? def.shader : '',
       technique: def ? def.shader : mtl ? 'not in the .mtl' : 'no .mtl',
-      textures: (def?.samplers || []).map((s) => {
-        const path = normPath(s.path.replace(/^\.\//, '')), dir = dirOf(path);
-        return [s.name, { filename: fileOf(path), directory: dir ? `./${dir}/` : './', baseDir: resolveRelative(mtlDir, dir), srgb: s.srgb }];
-      }),
+      textures,
       parameters: def ? def.vectors : [],
       prefox: { shader: def ? def.shader : '', states: def ? def.states : {}, missing: !def },
     });

@@ -55,7 +55,8 @@ async function readPreFoxModel(path, problems) {
     try { mtl = parseMtl(await readGameText(listing.mtl)); }
     catch (e) { problems.push(`${fileOf(path)}: couldn't read ${fileOf(listing.mtl)}${isGone(e) || /is not open/.test(e.message) ? ' (not found)' : `: ${e.message}`}`); }
   }
-  const missing = attachMaterials(parsed, mtl, dirOf(listing?.mtl || path));
+  const uniform = listing?.type?.toLowerCase() === 'uniform';
+  const missing = attachMaterials(parsed, mtl, dirOf(listing?.mtl || path), { uniform });
   if (mtl && missing.length) problems.push(`${fileOf(path)}: ${missing.join(', ')} not in ${fileOf(listing.mtl)}`);
   if (parsed.warnings.length) problems.push(`${fileOf(path)} uses ${parsed.warnings.join(', ')}`);
   return parsed;
