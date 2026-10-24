@@ -15,7 +15,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / `dummy_kit` style texture). The kit you pick stays selected as you move between players.
 - **Default models:** players with only a face model are shown with a default PES boots model and gloves, from PES 17 or PES 21 (picked under Default models in the settings; Pre-Fox players keep their own choice, PES 17 to start with). Skin color can be picked per player (`skin_color`, `thigh_bsm` and `arm_bsm` textures follow it; when they're found as named next to the model, they're offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player. For Pre-Fox players, an `oral_body.model`, `oral_boots.model` or `oral_kit.model` their face folder's `.xml` lists counts as their own body, and a `gloveL` / `gloveR` entry replaces just that default hand (an entry whose file is missing doesn't count).
 - **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton. The helper bones (shorts panels, sleeves, shoulders, collar, elbows, wrists) are placed the way PES places them, using driver formulas ported from the game, so kits deform as they do in game.
-- **Settings:** the cog at the top right opens the global settings: display options, default models and navigation.
+- **Settings:** the cog at the top right opens the global settings: display options, default models and navigation. They're remembered in this browser between visits.
 - **Display options:**
   - Draw backfaces toggle
   - Bone overlay

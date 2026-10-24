@@ -52,6 +52,7 @@ bindOptions({
     await reloadForDefaults();
   },
 });
+showGrid(options.grid); // as remembered (the grid was made before the options were read)
 
 $('tPlayerDefaults').addEventListener('change', async () => {
   const player = viewedPlayer();
