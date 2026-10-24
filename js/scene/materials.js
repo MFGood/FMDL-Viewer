@@ -4,6 +4,10 @@
 //   Forward (3DFW): always alpha-blended; alpha 16 / 48 (0x20 = two-sided).
 //   Shadow flag 0x2 = invisible, in both families.
 // Glass, metallic (GGX) and fresnel-rim shaders are approximated; UV scroll and UV step animate.
+//
+// Pre-Fox (.model) materials come from .mtl files instead (wiki: "Pre-Fox" .mtl file): the shader name
+// plus states. alphablend = blended, alphatest = cut out below alpharef (0–255), twosided, ztest / zwrite.
+// Shadeless and Constant draw unlit; every other shader is drawn lit with its DiffuseMap.
 
 import * as THREE from 'three';
 import { options } from '../core/options.js';
@@ -20,6 +24,7 @@ export const param = (mi, name, i = 0, fallback = 0) => {
 
 /** What kind of shader a material uses: { forward, kind, anim, label }. */
 export function classify(mi) {
+  if (mi.prefox) return classifyPreFox(mi.prefox);
   const tech = `${mi.technique} ${mi.shader}`.toLowerCase();
   const forward = /3dfw/.test(tech);
   const kind = /glass/.test(tech) ? 'glass' : /constant/.test(tech) ? 'constant' : /ggx/.test(tech) ? 'ggx' : /incidence/.test(tech) ? 'fresnel' : 'blin';
@@ -30,15 +35,27 @@ export function classify(mi) {
   return { forward, kind, anim, label };
 }
 
-// Texture roles the viewer draws with. Normal and specular maps aren't used.
-const USED_ROLES = ['Base_Tex_SRGB', 'Base_Tex_LIN', 'MetalnessMap_Tex_LIN', 'GlassReflection_Tex_SRGB', 'Timing_Tex_LIN'];
+function classifyPreFox({ shader, states, missing }) {
+  const forward = states.alphablend >= 1;
+  const kind = /shadeless|constant/i.test(shader) ? 'constant' : 'blin';
+  const label = [
+    'pre-Fox', missing ? 'material not found' : kind === 'constant' ? 'unlit' : 'lit',
+    forward && 'blended', states.alphatest >= 1 && `alpha test ${states.alpharef ?? 0}`, states.twosided >= 1 && 'two-sided',
+  ].filter(Boolean).join(' · ');
+  return { forward, kind, anim: null, label };
+}
+
+// Texture roles the viewer draws with. Normal and specular maps aren't used. DiffuseMap is Pre-Fox's base texture.
+const USED_ROLES = ['Base_Tex_SRGB', 'Base_Tex_LIN', 'MetalnessMap_Tex_LIN', 'GlassReflection_Tex_SRGB', 'Timing_Tex_LIN', 'DiffuseMap'];
 export const isUsedRole = (role) => USED_ROLES.some((r) => r.toLowerCase() === role.toLowerCase()) || /^Base_Tex/i.test(role);
 const roleRef = (mi, role) => mi.textures.find(([r]) => r.toLowerCase() === role.toLowerCase())?.[1] || null;
-const baseRole = (mi) => mi.textures.find(([r]) => /^Base_Tex/i.test(r)) || null;
+const baseRole = (mi) => mi.textures.find(([r]) => /^(Base_Tex|DiffuseMap$)/i.test(r)) || null;
 
 function textureFor(model, role, ref) {
   if (!ref || !options.textures) return null;
-  return gpuTexture(texturePath(model, ref), /_SRGB$/i.test(role) ? 'srgb' : 'lin');
+  // A Pre-Fox sampler says its own colour space (srgb="1"); Fox roles end in _SRGB or _LIN.
+  const srgb = ref.srgb ?? /_SRGB$/i.test(role);
+  return gpuTexture(texturePath(model, ref), srgb ? 'srgb' : 'lin');
 }
 
 /** Every texture file the meshes need, so they can be decoded before the materials are built. */
@@ -160,8 +177,27 @@ export function makeMaterial(mesh, model) {
   return materialFor(mesh, model, map, cls);
 }
 
+/** A Pre-Fox material, following its .mtl states. */
+function preFoxMaterial(mi, map, cls) {
+  const { states } = mi.prefox;
+  const common = {
+    color: map ? 0xffffff : 0xb9c4bd,
+    map,
+    side: options.backFaces || states.twosided >= 1 ? THREE.DoubleSide : THREE.FrontSide,
+    wireframe: options.wireframe,
+    depthTest: (states.ztest ?? 1) >= 1,
+    depthWrite: (states.zwrite ?? 1) >= 1,
+    transparent: !!map && cls.forward,
+    // Alpha test drops pixels at or below alpharef; blending drops only fully transparent ones.
+    alphaTest: !map ? 0 : states.alphatest >= 1 ? Math.min(1, ((states.alpharef ?? 0) + 1) / 255) : cls.forward ? 0.01 : 0,
+  };
+  if (cls.kind === 'constant') return new THREE.MeshBasicMaterial(common);
+  return new THREE.MeshStandardMaterial({ ...common, roughness: 0.75, metalness: 0, envMapIntensity: 0.35 });
+}
+
 function materialFor(mesh, model, map, cls) {
   const mi = mesh.materialInstance;
+  if (mi.prefox) return preFoxMaterial(mi, map, cls);
   const twoSided = !!(mesh.alphaFlags & 0x20);
   const common = {
     color: map ? 0xffffff : 0xb9c4bd,

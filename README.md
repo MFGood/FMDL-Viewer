@@ -8,11 +8,12 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 ## Features
 
 - **Opening files:** load individual `.fmdl` models or an entire aesthetics export. Exports can be opened as a `.zip` without much trouble. Added `.rar` and `.7z` support but memory usage goes crazy once you drop one in. Opening a folder is the better way.
+- **Pre-Fox models (PES 16 / 17):** `.model` files are read too. As in the game, only the `.model` files an `.xml` next to them lists are shown, each with the `.mtl` the `.xml` assigns it; each mesh's material is looked up by name in that `.mtl` (shader, `DiffuseMap` and the alpha, two-sided and z states). zlib-compressed (WESYS) `.model`, `.mtl` and `.xml` files are unpacked. Open a `.model` together with its `.xml`, `.mtl` and textures, or a folder or export holding them.
 - **Team view:** shows the team name and logo, and a player list with names and portraits taken from the Faces, Boots and Gloves folders. Each player's textures are matched to the right folders automatically.
 - **Reload:** press **R** to reload the export while keeping the current player, kit and camera, so you can preview changes as you make them.
 - **Materials:** shaders follow the Fox Engine materials, including unlit, glass, metallic, two-sided and transparent ones. UV scroll and UV step materials animate, including timing textures, so you get a quick preview of animation changes.
 - **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / `dummy_kit` style texture). The kit you pick stays selected as you move between players.
-- **Default models:** players with only a face model are shown with a default PES boots model and gloves, from PES 17 or PES 21 (picked under Default models once they're shown). Skin color can be picked per player (`skin_color`, `thigh_bsm` and `arm_bsm` textures follow it; when they're found as named next to the model, they're offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player.
+- **Default models:** players with only a face model are shown with a default PES boots model and gloves, from PES 17 or PES 21 (picked under Default models once they're shown; Pre-Fox players keep their own choice, PES 17 to start with). Skin color can be picked per player (`skin_color`, `thigh_bsm` and `arm_bsm` textures follow it; when they're found as named next to the model, they're offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player. For Pre-Fox players, an `oral_body.model` their face folder's `.xml` lists as `type="parts"` counts as their own body, and a `gloveL` / `gloveR` entry replaces just that default hand (an entry whose file is missing doesn't count).
 - **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton. The helper bones (shorts panels, sleeves, shoulders, collar, elbows, wrists) are placed the way PES places them, using driver formulas ported from the game, so kits deform as they do in game.
 - **Display options:**
   - Draw backfaces toggle
@@ -61,6 +62,8 @@ js/
     state.js               what's being shown right now (models, export, player, kit)
   formats/
     fmdl.js                .fmdl model parser (port of pes-fmdl-blender's FmdlFile.py)
+    model.js               Pre-Fox .model parser (port of pes-model-blender's ModelFile.py)
+    mtl.js                 Pre-Fox .xml model lists and .mtl materials
     texture-files.js       .ftex / .dds readers (Ftex.py port)
     block-decode.js        DXT / BC4 / BC5 / BC7 decoding to RGBA
     aet.js                 aesthetics export layout: players, kits, texture lookup rules
@@ -105,6 +108,7 @@ assets/
   licence restriction), in `vendor/7zip/`.
 - The model and texture parsing and the PES skeleton data are ported from
   [pes-fmdl-blender](https://github.com/the4chancup/pes-fmdl-blender) by the4chancup; see that
-  repository for its licence.
+  repository for its licence. The `.model` parsing is ported from
+  [pes-model-blender](https://github.com/the4chancup/pes-model-blender), also by the4chancup.
 - Shader behaviour follows the Fox Engine section of the
   [implyingrigged.info Materials wiki](https://implyingrigged.info/wiki/Materials).

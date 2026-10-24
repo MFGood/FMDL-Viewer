@@ -2,12 +2,14 @@
 // textures, kits or options change, and which meshes are shown.
 
 import * as THREE from 'three';
-import { readFile, isGone } from './core/files.js';
+import { readFile, readGameText, isGone, listedModels } from './core/files.js';
 import { setStatus, showError, hideError } from './core/notices.js';
 import { options } from './core/options.js';
 import { state } from './core/state.js';
 import { $ } from './core/dom.js';
 import { parseFmdl } from './formats/fmdl.js';
+import { parseModel } from './formats/model.js';
+import { parseMtl, attachMaterials } from './formats/mtl.js';
 import { dirOf, fileOf } from './formats/aet.js';
 import { isDefaultModel, viewedPlayer, setSetting, hiddenParts } from './export/players.js';
 import { pickCurrentKit, kitsAvailable } from './export/texture-lookup.js';
@@ -40,11 +42,30 @@ export function showNoModels() {
   renderTree(); renderMaterials(); renderKits(); renderDefaultVersion(); applyVisibility();
 }
 
-/** Read and parse .fmdl files. Files deleted from disk since they were opened are forgotten. */
+/**
+ * Read and parse a Pre-Fox .model, with the materials from the .mtl its .xml assigns. Problems that still
+ * leave something to show are added to `problems`.
+ */
+async function readPreFoxModel(path, problems) {
+  const parsed = await parseModel(await readFile(path));
+  const listing = listedModels.get(path.toLowerCase());
+  let mtl = null;
+  if (!listing?.mtl) problems.push(`${fileOf(path)}: its .xml assigns no .mtl, so it has no materials`);
+  else {
+    try { mtl = parseMtl(await readGameText(listing.mtl)); }
+    catch (e) { problems.push(`${fileOf(path)}: couldn't read ${fileOf(listing.mtl)}${isGone(e) || /is not open/.test(e.message) ? ' (not found)' : `: ${e.message}`}`); }
+  }
+  const missing = attachMaterials(parsed, mtl, dirOf(listing?.mtl || path));
+  if (mtl && missing.length) problems.push(`${fileOf(path)}: ${missing.join(', ')} not in ${fileOf(listing.mtl)}`);
+  if (parsed.warnings.length) problems.push(`${fileOf(path)} uses ${parsed.warnings.join(', ')}`);
+  return parsed;
+}
+
+/** Read and parse .fmdl and .model files. Files deleted from disk since they were opened are forgotten. */
 async function readModels(paths) {
   const loaded = [], problems = [], gone = [];
   for (const path of paths) {
-    try { loaded.push({ path, parsed: parseFmdl(await readFile(path)) }); }
+    try { loaded.push({ path, parsed: /\.model$/i.test(path) ? await readPreFoxModel(path, problems) : parseFmdl(await readFile(path)) }); }
     catch (e) {
       if (isGone(e)) gone.push(path);
       else problems.push(`Couldn't read ${fileOf(path)}: ${e.message}`);
@@ -81,9 +102,10 @@ function addModel({ path, parsed }, player) {
   state.models.push(model);
 }
 
-/** Replace what's shown with these .fmdl files (paths in the virtual file system). */
-export async function loadModels(paths, label, player = null) {
+/** Replace what's shown with these .fmdl / .model files (paths in the virtual file system), with notes to show. */
+export async function loadModels(paths, label, player = null, notes = []) {
   const { loaded, problems } = await readModels(paths);
+  problems.unshift(...notes);
   clearModels();
   for (const item of loaded) addModel(item, player);
   $('fileName').textContent = label;

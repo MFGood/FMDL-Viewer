@@ -6,7 +6,7 @@ import { state } from '../core/state.js';
 import { fileOf, kitLabel } from '../formats/aet.js';
 import {
   viewedPlayer, defaultParts, defaultsOn, hasOwnBoots, settingsOf, setSetting, usesSkin,
-  isDefaultModel, DEFAULT_VERSIONS, defaultVersion, setDefaultVersion,
+  isDefaultModel, DEFAULT_VERSIONS, defaultVersion, setDefaultVersion, isPreFox, defaultHandsLabel,
 } from '../export/players.js';
 import { kitsAvailable, texturePath, skinFor, customSkinAvailable, CUSTOM_SKIN } from '../export/texture-lookup.js';
 import { classify, isUsedRole } from '../scene/materials.js';
@@ -54,11 +54,12 @@ export function renderDefaultVersion() {
   const shown = state.models.some((m) => isDefaultModel(m.path));
   $('defaultVersionSection').hidden = !shown;
   if (!shown) return;
-  const current = defaultVersion();
+  // Pre-Fox (.model) players keep their own choice, PES 17 to start with.
+  const prefox = isPreFox(state.models.map((m) => m.path)), current = defaultVersion(prefox);
   buttonRow($('defaultVersions'), Object.entries(DEFAULT_VERSIONS).map(([id, label]) => ({
     label, on: id === current, onClick: async () => {
-      if (id === defaultVersion()) return;
-      setDefaultVersion(id);
+      if (id === defaultVersion(prefox)) return;
+      setDefaultVersion(id, prefox);
       await reloadForDefaults();
     },
   })));
@@ -73,9 +74,12 @@ export function renderPlayerPanel() {
   $('tPlayerDefaults').checked = defaultsOn(player);
   const note = $('playerDefaultsNote');
   note.textContent = '';
-  const what = parts.hands ? 'the default body and hands' : 'the default body (they have their own gloves or no face, so no default hands)';
+  const hands = defaultHandsLabel(parts);
+  const what = hands === 'hands' ? 'the default body and hands'
+    : hands ? `the default body and ${hands} (they have their own other hand)`
+      : 'the default body (they have their own gloves or no face, so no default hands)';
   if (settingsOf(player).useDefaults == null) {
-    note.append(hasOwnBoots(player) ? `Off: they have their own boots model. Turn on to add ${what}.` : `Following the global setting. Shows ${what}.`);
+    note.append(hasOwnBoots(player) ? `Off: they have their own boots or body model. Turn on to add ${what}.` : `Following the global setting. Shows ${what}.`);
     return;
   }
   const reset = el('button', { type: 'button', class: 'linkish' }, 'Use global setting');

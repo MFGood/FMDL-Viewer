@@ -74,14 +74,14 @@ export const hasFolder = (batch) => !!batch.drop?.entries.some((e) => e.isDirect
 
 /**
  * What a batch is, for spotting that the same thing was opened again: the archive's name, the top
- * folder's name, or the set of .fmdl names for loose models. Textures on their own have no key.
+ * folder's name, or the set of .fmdl / .model names for loose models. Textures on their own have no key.
  */
 export function batchKey(items) {
   const archive = items.find((i) => ARCHIVE.test(i.file.name));
   if (archive) return `archive:${archive.file.name.toLowerCase()}`;
   const inFolder = items.find((i) => i.path);
   if (inFolder) return `folder:${inFolder.path.split('/')[0].toLowerCase()}`;
-  const models = items.filter((i) => /\.fmdl$/i.test(i.file.name)).map((i) => i.file.name.toLowerCase()).sort();
+  const models = items.filter((i) => /\.(fmdl|model)$/i.test(i.file.name)).map((i) => i.file.name.toLowerCase()).sort();
   return models.length ? `loose:${models.join('|')}` : null;
 }
 

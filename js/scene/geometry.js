@@ -56,8 +56,10 @@ export function buildGeometry(mesh) {
 
   // FMDL stores triangles clockwise; three.js treats counter-clockwise as front-facing.
   // Reverse each triangle, as the Blender importer does (IO.py: reversed(face.vertices)).
+  // Pre-Fox .model triangles are already counter-clockwise (pes-model-blender keeps their order).
   const indices = new Uint16Array(mesh.faces.length);
-  for (let i = 0; i < indices.length; i += 3) {
+  if (mesh.ccw) indices.set(mesh.faces);
+  else for (let i = 0; i < indices.length; i += 3) {
     indices[i] = mesh.faces[i + 2];
     indices[i + 1] = mesh.faces[i + 1];
     indices[i + 2] = mesh.faces[i];

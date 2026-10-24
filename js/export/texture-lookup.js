@@ -15,6 +15,12 @@ export const lookupContext = (model) => ({
 });
 
 /**
+ * Where to look for one texture reference. A Pre-Fox .mtl's paths are relative to the .mtl, so the folder
+ * they point to stands in for the model's own folder.
+ */
+const refContext = (model, ref) => (ref.baseDir != null ? { ...lookupContext(model), ownDir: ref.baseDir } : lookupContext(model));
+
+/**
  * The open file a texture reference resolves to, or null. Kit textures follow the current kit; skin
  * textures follow the player's skin colour, looked up next to the model first and then in the defaults.
  */
@@ -27,9 +33,11 @@ export function texturePath(model, ref) {
       if (custom) return custom;
     }
     const name = skinned.numbered(skin === CUSTOM_SKIN ? 1 : skin);
-    return resolveTexture(index, { ...ref, filename: `${name}.dds` }, lookupContext(model), state.currentKit) || index.texture(DEFAULTS, name);
+    return resolveTexture(index, { ...ref, filename: `${name}.dds` }, refContext(model, ref), state.currentKit) || index.texture(DEFAULTS, name);
   }
-  return resolveTexture(index, ref, lookupContext(model), state.currentKit);
+  return resolveTexture(index, ref, refContext(model, ref), state.currentKit)
+    // A Pre-Fox path that leads nowhere: try the model's own folder too.
+    || (ref.baseDir != null ? resolveTexture(index, ref, lookupContext(model), state.currentKit) : null);
 }
 
 // ---------------------------------------------------------------- skin colour
@@ -38,7 +46,7 @@ export function texturePath(model, ref) {
 export const CUSTOM_SKIN = 7;
 
 const customSkinPath = (model, ref, skinned) =>
-  resolveTexture(index, { ...ref, filename: `${skinned.custom}.dds` }, lookupContext(model), null);
+  resolveTexture(index, { ...ref, filename: `${skinned.custom}.dds` }, refContext(model, ref), null);
 
 /** The first custom texture the loaded models' skin textures can use (of one kind, or any), or null. */
 function firstCustomSkin(kind = null) {
@@ -74,7 +82,7 @@ function allTextureRefs() {
   const refs = [];
   for (const model of state.models) {
     const used = new Set(model.parsed.meshes.map((m) => m.materialInstance));
-    for (const mi of used) for (const [, ref] of mi.textures) refs.push({ ref, ctx: lookupContext(model) });
+    for (const mi of used) for (const [, ref] of mi.textures) refs.push({ ref, ctx: refContext(model, ref) });
   }
   return refs;
 }

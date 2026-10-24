@@ -1,7 +1,9 @@
 // files.js — the virtual file system. Every opened file (loose, from an archive, from a folder, or one of
 // the viewer's own assets) is registered here under a path, with a function that reads it on demand.
 
-import { FileIndex, normPath } from '../formats/aet.js';
+import { FileIndex, normPath, dirOf, fileOf } from '../formats/aet.js';
+import { parseModelXml, resolveRelative } from '../formats/mtl.js';
+import { unwrapWesys } from '../formats/model.js';
 
 /** Folder that files opened on their own are put under. */
 export const LOOSE = 'loose';
@@ -33,6 +35,58 @@ export async function readFile(path) {
 }
 
 export const readText = async (path) => new TextDecoder('utf-8').decode(await readFile(path));
+
+/** A text file that may be WESYS zlib-compressed (Pre-Fox .xml and .mtl files can be). */
+export const readGameText = async (path) => new TextDecoder('utf-8').decode(await unwrapWesys(await readFile(path)));
+
+// ---------------------------------------------------------------- Pre-Fox model lists
+
+/**
+ * Pre-Fox .model files listed in the open .xml files: lowercase path -> { path, mtl, type, xml }, where mtl
+ * is the .mtl the .xml assigns (null if none) and type the .xml's type for it. Only listed .model files that
+ * exist are kept, and only they are loaded, as in the game.
+ * Rebuilt by readModelLists().
+ */
+export let listedModels = new Map();
+
+/** A path from an .xml or .mtl in folder `dir`, as an open file: relative to it, else by name in it. */
+function openPathFrom(dir, path) {
+  const relative = resolveRelative(dir, path);
+  return index.real(relative) || index.real(`${dir ? `${dir}/` : ''}${fileOf(normPath(path))}`) || relative;
+}
+
+/**
+ * A model path from an .xml in folder `dir`. Its file name can have wildcards ("./face_high_*.model", which
+ * the game fills in per platform); several matches prefer the PC one (win32).
+ */
+function modelPathFrom(dir, path) {
+  if (!/[*?]/.test(path)) return openPathFrom(dir, path);
+  const target = resolveRelative(dir, path);
+  const pattern = new RegExp(`^${fileOf(target).replace(/[.+^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*').replace(/\?/g, '.')}$`, 'i');
+  const matches = index.filesIn(dirOf(target)).filter((p) => pattern.test(fileOf(p)));
+  return matches.find((p) => /win32/i.test(fileOf(p))) || matches[0] || target;
+}
+
+/** Read every open .xml for the .model files it lists (call after rebuildIndex). Returns problems found. */
+export async function readModelLists() {
+  const lists = new Map(), problems = [];
+  for (const xml of allPaths().filter((p) => /\.xml$/i.test(p))) {
+    let entries;
+    try { entries = parseModelXml(await readGameText(xml)); }
+    catch (e) { if (!isGone(e)) problems.push(`Couldn't read ${fileOf(xml)}: ${e.message}`); continue; }
+    const dir = dirOf(xml);
+    for (const entry of entries) {
+      const path = modelPathFrom(dir, entry.model);
+      if (!index.has(path) || lists.has(path.toLowerCase())) continue;
+      lists.set(path.toLowerCase(), { path, mtl: entry.mtl ? openPathFrom(dir, entry.mtl) : null, type: entry.type, xml });
+    }
+  }
+  listedModels = lists;
+  return problems;
+}
+
+/** Whether a path is a model the viewer loads: any .fmdl, or a .model an .xml lists. */
+export const isModelPath = (path) => /\.fmdl$/i.test(path) || listedModels.has(normPath(path).toLowerCase());
 
 /**
  * A file deleted from disk after it was opened. Browsers report it as NotFoundError; a file that was

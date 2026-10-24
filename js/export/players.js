@@ -3,6 +3,7 @@
 
 import { options } from '../core/options.js';
 import { state } from '../core/state.js';
+import { listedModels } from '../core/files.js';
 import { stem } from '../formats/aet.js';
 
 // ---------------------------------------------------------------- default boots and hands
@@ -26,17 +27,25 @@ export const DEFAULT_FILES = [
 
 export const isDefaultModel = (path) => path.startsWith(`${DEFAULTS}/`);
 
-// Which version of the default models is used, remembered in this browser.
-let version = '21';
-try { const saved = localStorage.getItem('defaultModels'); if (saved in DEFAULT_VERSIONS) version = saved; } catch {}
+/** Whether any of these model paths is a Pre-Fox .model (PES 16 / 17). */
+export const isPreFox = (paths) => paths.some((p) => /\.model$/i.test(p));
 
-export const defaultVersion = () => version;
-export function setDefaultVersion(next) {
-  version = next;
-  try { localStorage.setItem('defaultModels', next); } catch {}
+// Which version of the default models is used, remembered in this browser: one choice for Fox (.fmdl)
+// players, PES 21 to start with, and one for Pre-Fox (.model) players, PES 17 to start with.
+const STORAGE_KEYS = { fox: 'defaultModels', prefox: 'defaultModelsPreFox' };
+const versions = { fox: '21', prefox: '17' };
+for (const [kind, key] of Object.entries(STORAGE_KEYS)) {
+  try { const saved = localStorage.getItem(key); if (saved in DEFAULT_VERSIONS) versions[kind] = saved; } catch {}
 }
 
-const defaultModel = (name) => `${DEFAULTS}/${name}.${version}.fmdl`;
+const kindOf = (prefox) => (prefox ? 'prefox' : 'fox');
+export const defaultVersion = (prefox = false) => versions[kindOf(prefox)];
+export function setDefaultVersion(next, prefox = false) {
+  versions[kindOf(prefox)] = next;
+  try { localStorage.setItem(STORAGE_KEYS[kindOf(prefox)], next); } catch {}
+}
+
+const defaultModel = (name, prefox) => `${DEFAULTS}/${name}.${defaultVersion(prefox)}.fmdl`;
 
 // ---------------------------------------------------------------- per-player settings
 
@@ -61,7 +70,21 @@ export const viewedPlayer = () => (state.aet && state.activePlayer && !state.act
 
 // ---------------------------------------------------------------- which models a player shows
 
-export const hasOwnBoots = (p) => !!p?.boots?.fmdls.length;
+/** The .xml type of each of a player's Pre-Fox models ("parts", "gloveL"…), with the model's path. */
+const listedTypes = (p) => (p?.fmdls || []).map((path) => ({ path, type: (listedModels.get(path.toLowerCase())?.type || '').toLowerCase() }));
+
+/**
+ * A body model of the player's own: a Boots folder model, or (a common Pre-Fox trick to do without the
+ * Boots folder) an oral_body.model their face folder's .xml lists as "parts".
+ */
+export const hasOwnBoots = (p) => !!p?.boots?.fmdls.length
+  || listedTypes(p).some(({ path, type }) => type === 'parts' && stem(path) === 'oral_body');
+
+/** Which hands the player has a model of: both from a Gloves folder, or each from a gloveL / gloveR .xml entry. */
+function ownHands(p) {
+  const types = listedTypes(p).map((t) => t.type), gloves = !!p?.gloves?.fmdls.length;
+  return { left: gloves || types.includes('glovel'), right: gloves || types.includes('glover') };
+}
 
 /**
  * Whether a player gets the default models: their own setting if they have one; else off for players with
@@ -70,23 +93,31 @@ export const hasOwnBoots = (p) => !!p?.boots?.fmdls.length;
 export const defaultsOn = (p) => settingsOf(p).useDefaults ?? (hasOwnBoots(p) ? false : options.defaultModels);
 
 /**
- * Which default models a player would get. Defaults complete a player's own models, so a player with none
- * (portrait only) gets nothing. The body is added for any player with models, and the hands when they have
- * a face model but no gloves.
+ * Which default models a player would get: { boots, left, right, hands } (hands: either hand). Defaults
+ * complete a player's own models, so a player with none (portrait only) gets nothing. The body is added for
+ * any player with models, and each hand when they have a face model but no model of that hand.
  */
 export function defaultParts(p) {
-  if (!p || p.collars) return { boots: false, hands: false };
+  if (!p || p.collars) return { boots: false, left: false, right: false, hands: false };
   const boots = !!(p.face?.fmdls.length || p.boots?.fmdls.length || p.gloves?.fmdls.length);
-  return { boots, hands: boots && !p.gloves?.fmdls.length && !!p.face?.fmdls.length };
+  const own = ownHands(p), face = boots && !!p.face?.fmdls.length;
+  const left = face && !own.left, right = face && !own.right;
+  return { boots, left, right, hands: left || right };
 }
 
-/** The .fmdl paths to show for an export player: their own, plus the defaults they get. */
+/** The .fmdl / .model paths to show for an export player: their own, plus the defaults they get. */
 export function modelsFor(p) {
   if (!p || p.collars || !defaultsOn(p)) return p?.fmdls || [];
-  const parts = defaultParts(p), extra = [];
-  if (parts.boots) extra.push(defaultModel('boots'));
-  if (parts.hands) extra.push(defaultModel('glove_l'), defaultModel('glove_r'));
+  const parts = defaultParts(p), extra = [], prefox = isPreFox(p.fmdls);
+  if (parts.boots) extra.push(defaultModel('boots', prefox));
+  if (parts.left) extra.push(defaultModel('glove_l', prefox));
+  if (parts.right) extra.push(defaultModel('glove_r', prefox));
   return [...p.fmdls, ...extra];
+}
+
+/** Which default hands a player gets, as words: "hands", "left hand", "right hand" or null. */
+export function defaultHandsLabel(parts) {
+  return parts.left && parts.right ? 'hands' : parts.left ? 'left hand' : parts.right ? 'right hand' : null;
 }
 
 // ---------------------------------------------------------------- skin colour
@@ -142,7 +173,7 @@ export function playerSummary(p) {
   if (p.gloves?.fmdls.length) parts.push(`gloves g${p.gearId}`);
   if (defaultsOn(p)) {
     const d = defaultParts(p);
-    if (d.boots) parts.push(d.hands ? 'default boots & hands' : 'default boots');
+    if (d.boots) parts.push(d.hands ? `default boots & ${defaultHandsLabel(d)}` : 'default boots');
   }
   return parts.length ? parts.join(' · ') : p.portrait ? 'portrait only' : 'no models';
 }

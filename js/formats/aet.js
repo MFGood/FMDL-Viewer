@@ -76,10 +76,12 @@ export function gearSlot(id) {
 }
 
 /**
- * Read an export's structure. `readText(path)` returns a file's text (async).
+ * Read an export's structure. `readText(path)` returns a file's text (async); `isModel(path)` says which
+ * files are models to show (.fmdl, and Pre-Fox .model files their .xml lists). The players' `fmdls`
+ * lists hold both kinds.
  * Returns { root, teamName, notePath, logoPath, kitDir, commonDir, players, collars }.
  */
-export async function scanExport(index, readText) {
+export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.test(p)) {
   const root = findRoot(index);
   if (root === null) return null;
   const folder = (name) => index.subdir(root, name);
@@ -109,7 +111,7 @@ export async function scanExport(index, readText) {
     if (m) portraitsByNumber.set(+m[1], p);
   }
 
-  const fmdlsUnder = (dir) => index.filesUnder(dir).filter((p) => /\.fmdl$/i.test(p)).sort();
+  const fmdlsUnder = (dir) => index.filesUnder(dir).filter(isModel).sort();
   const players = [];
 
   // Faces: "XXXnn - Player Name".
@@ -170,7 +172,7 @@ export async function scanExport(index, readText) {
   out.players = players;
 
   const collarsDir = folder('Collars');
-  if (collarsDir) out.collars = index.filesIn(collarsDir).filter((p) => /\.fmdl$/i.test(p));
+  if (collarsDir) out.collars = index.filesIn(collarsDir).filter(isModel);
   return out;
 }
 

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FMDL Viewer</title>
-  <meta name="description" content="View PES / Fox Engine .fmdl models and aesthetics exports in the browser.">
+  <meta name="description" content="View PES .fmdl (Fox Engine) and .model (PES 16 / 17) models and aesthetics exports in the browser.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
   <link rel="stylesheet" href="css/viewer.css">
@@ -20,7 +20,7 @@
 <header>
   <h1>FMDL<span>/</span>viewer</h1>
   <div class="file" id="fileName">sample.fmdl (example)</div>
-  <label class="btn primary" for="fileInput">Open files…<input id="fileInput" type="file" multiple accept=".fmdl,.dds,.ftex,.zip,.7z,.rar"></label>
+  <label class="btn primary" for="fileInput">Open files…<input id="fileInput" type="file" multiple accept=".fmdl,.model,.xml,.mtl,.dds,.ftex,.zip,.7z,.rar"></label>
   <label class="btn" for="folderInput">Open export folder…<input id="folderInput" type="file" webkitdirectory multiple></label>
   <button id="reload" type="button" disabled title="Re-read the files you opened (R)">Reload</button>
   <button id="resetView" type="button">Frame model</button>
@@ -40,7 +40,7 @@
     <div class="roster" id="roster"></div>
   </aside>
   <div id="stage">
-    <div id="drop" hidden>Drop an aesthetics export (.zip, .7z, .rar or folder)<br>or .fmdl / .dds / .ftex files</div>
+    <div id="drop" hidden>Drop an aesthetics export (.zip, .7z, .rar or folder)<br>or .fmdl / .dds / .ftex files, or .model files with their .xml and .mtl</div>
     <div id="notices">
       <div id="status" role="status" hidden></div>
       <div id="err" role="alert" hidden><span id="errText"></span><button type="button" id="errClose" aria-label="Dismiss">×</button></div>
