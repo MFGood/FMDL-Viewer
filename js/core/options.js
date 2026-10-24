@@ -13,7 +13,7 @@ export const options = {
   animateUv: true,       // UV scroll / UV step
   run: false,            // run animation
   grid: true,
-  frameStray: true,      // include stray meshes when framing the model
+  frameStray: false,     // include stray meshes when framing the model
   hiddenMeshes: false,   // anti-blur and invisible meshes
   weightScaling: true,   // PES weight scaling
 };
