@@ -73,12 +73,15 @@ export const viewedPlayer = () => (state.aet && state.activePlayer && !state.act
 /** The .xml type of each of a player's Pre-Fox models ("parts", "gloveL"…), with the model's path. */
 const listedTypes = (p) => (p?.fmdls || []).map((path) => ({ path, type: (listedModels.get(path.toLowerCase())?.type || '').toLowerCase() }));
 
+// Pre-Fox models a face folder's .xml lists to do without the Boots folder (a common trick).
+const ORAL_BODY_MODELS = ['oral_body', 'oral_boots', 'oral_kit'];
+
 /**
- * A body model of the player's own: a Boots folder model, or (a common Pre-Fox trick to do without the
- * Boots folder) an oral_body.model their face folder's .xml lists as "parts".
+ * A body model of the player's own: a Boots folder model, or an oral_body, oral_boots or oral_kit .model
+ * their face folder's .xml lists (whatever its type: "parts", "uniform"…).
  */
 export const hasOwnBoots = (p) => !!p?.boots?.fmdls.length
-  || listedTypes(p).some(({ path, type }) => type === 'parts' && stem(path) === 'oral_body');
+  || (p?.fmdls || []).some((path) => /\.model$/i.test(path) && ORAL_BODY_MODELS.includes(stem(path)));
 
 /** Which hands the player has a model of: both from a Gloves folder, or each from a gloveL / gloveR .xml entry. */
 function ownHands(p) {
