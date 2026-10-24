@@ -13,6 +13,7 @@ export const options = {
   animateUv: true,       // UV scroll / UV step
   run: false,            // run animation
   grid: true,
+  controlHints: true,    // key and mouse hints for players, kits and the view
   frameStray: false,     // include stray meshes when framing the model
   hiddenMeshes: false,   // anti-blur and invisible meshes
   weightScaling: true,   // PES weight scaling
@@ -28,6 +29,7 @@ const CHECKBOX_IDS = {
   animateUv: 'tAnim',
   run: 'tRun',
   grid: 'tGrid',
+  controlHints: 'tHints',
   frameStray: 'tStray',
   hiddenMeshes: 'tBlur',
   weightScaling: 'tWeight',

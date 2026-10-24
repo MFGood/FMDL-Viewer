@@ -57,6 +57,11 @@ html, body {
   display: none !important;
 }
 
+/* Control hints (keys for players, kits and the view) can be turned off in the settings. */
+body.no-hints .control-hint {
+  display: none !important;
+}
+
 body {
   margin: 0;
   background: var(--bg);

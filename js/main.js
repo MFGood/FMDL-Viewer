@@ -37,6 +37,7 @@ bindOptions({
   boundingBoxes: () => (boxLayer.visible = options.boundingBoxes),
   bones: () => (boneLayer.visible = options.bones),
   grid: () => showGrid(options.grid),
+  controlHints: () => applyHints(),
   hiddenMeshes: applyVisibility,
   frameStray: frameModel,
   weightScaling: applyWeightOption,
@@ -53,6 +54,8 @@ bindOptions({
   },
 });
 showGrid(options.grid); // as remembered (the grid was made before the options were read)
+function applyHints() { document.body.classList.toggle('no-hints', !options.controlHints); }
+applyHints();
 
 $('tPlayerDefaults').addEventListener('change', async () => {
   const player = viewedPlayer();

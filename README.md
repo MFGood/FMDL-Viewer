@@ -20,6 +20,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
   - Draw backfaces toggle
   - Bone overlay
   - Ground grid centered on the origin
+  - Control hints for players, kits and the view, which can be hidden
   - PES-style weight scaling (vertices whose weights don't add up to 1 get scaled towards or away from origin)
   - Option to frame stray meshes within the viewport (useful for catching bits floating above/below the pitch)
 - **Controls:**

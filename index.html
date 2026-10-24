@@ -43,6 +43,7 @@
         <label class="chk"><input type="checkbox" id="tAnim" checked> Animate UV scroll / step</label>
         <label class="chk" title="A simple run cycle on the full PES skeleton, to see how the model's weights deform."><input type="checkbox" id="tRun"> Run animation</label>
         <label class="chk"><input type="checkbox" id="tGrid" checked> Ground grid</label>
+        <label class="chk" title="The key and mouse hints for switching players and kits and for moving the view. The full list stays under Navigation."><input type="checkbox" id="tHints" checked> Control hints</label>
         <div class="chk-row">
           <label class="chk"><input type="checkbox" id="tBg"> Custom background</label>
           <input type="color" id="bgColor" value="#808080" aria-label="Background colour" title="Background colour">
@@ -85,7 +86,7 @@
       </div>
     </div>
     <h2 class="roster-h">Players</h2>
-    <p class="hint roster-hint"><kbd>Ctrl</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> for the previous / next player</p>
+    <p class="hint roster-hint control-hint"><kbd>Ctrl</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> for the previous / next player</p>
     <div class="roster" id="roster"></div>
   </aside>
   <div id="stage">
@@ -94,7 +95,7 @@
       <div id="status" role="status" hidden></div>
       <div id="err" role="alert" hidden><span id="errText"></span><button type="button" id="errClose" aria-label="Dismiss">×</button></div>
     </div>
-    <div id="help"></div>
+    <div id="help" class="control-hint"></div>
   </div>
   <aside id="details">
     <section>
@@ -107,7 +108,7 @@
     <section id="kitSection" hidden>
       <h2>Kits</h2>
       <div class="kits" id="kits"></div>
-      <p class="hint"><kbd>Ctrl</kbd> + <kbd>←</kbd> / <kbd>→</kbd> for the previous / next kit</p>
+      <p class="hint control-hint"><kbd>Ctrl</kbd> + <kbd>←</kbd> / <kbd>→</kbd> for the previous / next kit</p>
     </section>
     <section id="playerSection" hidden>
       <h2>This player</h2>
