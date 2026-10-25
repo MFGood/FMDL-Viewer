@@ -344,8 +344,8 @@ ul {
   display: flex;
   align-items: center;
   gap: 6px;
-  margin-left: -16px;
-  padding: 2px 0;
+  margin-left: -22px;
+  padding: 2px 0 2px 23px;
   border: 0;
   background: none;
   color: var(--muted);
