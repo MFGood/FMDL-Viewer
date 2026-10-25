@@ -73,6 +73,32 @@ export function renderPlayerPanel() {
   note.append(`Set for this player. Shows ${what}. `, reset);
 }
 
+// Lists collapsed in the model tree, by key ("models", or a model's path and a group index), so they stay
+// collapsed when the tree is redrawn.
+const collapsed = new Set();
+const PLURALS = { model: 'models', mesh: 'meshes' };
+
+/**
+ * A collapsible part of the model tree: its contents with a rail beside them, the vertical line. Clicking
+ * the rail collapses the contents to one "+ Show N meshes" line; clicking that opens them again.
+ */
+function collapsible(key, count, noun, ...contents) {
+  const what = count === 1 ? noun : PLURALS[noun];
+  const body = el('div', { class: 'branch-body' }, ...contents);
+  const rail = el('button', { type: 'button', class: 'rail', title: `Hide these ${PLURALS[noun]}`, 'aria-label': `Hide ${count} ${what}` });
+  const show = el('button', { type: 'button', class: 'show-more' }, el('span', { class: 'plus', 'aria-hidden': 'true' }, '+'), `Show ${count} ${what}`);
+  const branch = el('div', { class: 'branch' }, rail, body, show);
+  const set = (closed) => {
+    body.hidden = rail.hidden = closed;
+    show.hidden = !closed;
+    if (closed) collapsed.add(key); else collapsed.delete(key);
+  };
+  rail.addEventListener('click', () => { set(true); show.focus(); });
+  show.addEventListener('click', () => { set(false); rail.focus(); });
+  set(collapsed.has(key));
+  return branch;
+}
+
 /** Models, their mesh groups and meshes, with checkboxes to hide them. */
 export function renderTree() {
   const tree = $('tree');
@@ -81,6 +107,7 @@ export function renderTree() {
   const top = el('ul');
   for (const model of state.models) {
     const meshesIn = (group) => state.meshObjects.filter((m) => m.model === model && m.mesh.group === group);
+    const meshesUnder = (group) => meshesIn(group).length + group.children.reduce((n, g) => n + meshesUnder(g), 0);
     // Unticked groups and meshes are remembered in model.hidden, so they stay hidden next time.
     const { hidden } = model, groupIndex = (g) => model.parsed.meshGroups.indexOf(g);
     const groupItem = (group) => {
@@ -100,8 +127,11 @@ export function renderTree() {
       });
       item.append(label);
       const own = meshesIn(group);
-      if (own.length) item.append(el('div', { class: 'mesh' }, own.map(meshLine).join('\n')));
-      if (group.children.length) item.append(el('ul', {}, ...group.children.map(groupItem)));
+      if (own.length || group.children.length) {
+        item.append(collapsible(`${model.path}|${groupIndex(group)}`, meshesUnder(group), 'mesh',
+          own.length ? el('div', { class: 'mesh' }, ...own.map(meshLine)) : null,
+          group.children.length ? el('ul', {}, ...group.children.map(groupItem)) : null));
+      }
       return item;
     };
     const item = el('li');
@@ -109,16 +139,38 @@ export function renderTree() {
     label.title = model.path;
     item.append(label);
     const roots = model.parsed.meshGroups.filter((g) => !g.parent);
-    if (roots.length) item.append(el('ul', {}, ...roots.map(groupItem)));
+    const meshCount = state.meshObjects.filter((m) => m.model === model).length;
+    if (roots.length) item.append(collapsible(model.path, meshCount, 'mesh', el('ul', {}, ...roots.map(groupItem))));
     top.append(item);
   }
-  tree.append(top);
+  tree.append(collapsible('models', state.models.length, 'model', top));
 }
 
+/** One mesh in the tree; its material name links to the material in the Materials list. */
 function meshLine(m) {
   const offWeight = offWeightCount(m.mesh.vertices);
   const flags = m.obj.userData.antiblur ? ' · anti-blur' : m.obj.userData.invisible ? ' · invisible' : '';
-  return `#${m.mesh.index} · ${m.mesh.vertices.count} v · ${m.mesh.materialInstance.name}${flags}${offWeight ? ` · ${offWeight} v not weighted to 1` : ''}`;
+  const mi = m.mesh.materialInstance;
+  const link = el('button', { type: 'button', class: 'mat-link', title: 'Show this material' }, mi.name);
+  link.addEventListener('click', () => showMaterial(mi));
+  return el('div', {}, `#${m.mesh.index} · ${m.mesh.vertices.count} v · `, link,
+    `${flags}${offWeight ? ` · ${offWeight} v not weighted to 1` : ''}`);
+}
+
+// ---------------------------------------------------------------- materials
+
+const materialEntries = new Map(); // material instance -> its entry in the Materials list
+let pickedMaterial = null;          // the material last picked from the tree, highlighted
+
+/** Scroll the details pane to a material's entry and highlight it. */
+function showMaterial(mi) {
+  pickedMaterial = mi;
+  markPickedMaterial();
+  materialEntries.get(mi)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+function markPickedMaterial() {
+  for (const [mi, entry] of materialEntries) entry.classList.toggle('picked', mi === pickedMaterial);
 }
 
 /** A found texture's path relative to the export root (or just its name for loose files). */
@@ -135,6 +187,7 @@ function shortPath(path) {
 export function renderMaterials() {
   const box = $('mats');
   box.textContent = '';
+  materialEntries.clear();
   for (const model of state.models) {
     if (state.models.length > 1) box.append(el('div', { class: 'model-h' }, model.label));
     const used = new Set(model.parsed.meshes.map((m) => m.materialInstance));
@@ -142,9 +195,11 @@ export function renderMaterials() {
       if (!used.has(mi)) continue;
       const entry = el('div', { class: 'mat' }, el('div', {}, mi.name), el('code', {}, `${mi.technique} · ${classify(mi).label}`));
       for (const [role, ref] of mi.textures) entry.append(textureLine(model, role, ref));
+      materialEntries.set(mi, entry);
       box.append(entry);
     }
   }
+  markPickedMaterial(); // the picked material stays highlighted as the list is redrawn (kit changes…)
 }
 
 function textureLine(model, role, ref) {
