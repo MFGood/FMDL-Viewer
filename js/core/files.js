@@ -44,7 +44,7 @@ export const readGameText = async (path) => new TextDecoder('utf-8').decode(awai
 /**
  * Pre-Fox .model files listed in the open .xml files: lowercase path -> { path, mtl, type, xml }, where mtl
  * is the .mtl the .xml assigns (null if none) and type the .xml's type for it. Only listed .model files that
- * exist are kept, and only they are loaded, as in the game.
+ * exist are kept, and only they are loaded, as in the game (plus face-folder hair; see readModelLists).
  * Rebuilt by readModelLists().
  */
 export let listedModels = new Map();
@@ -67,7 +67,12 @@ function modelPathFrom(dir, path) {
   return matches.find((p) => /win32/i.test(fileOf(p))) || matches[0] || target;
 }
 
-/** Read every open .xml for the .model files it lists (call after rebuildIndex). Returns problems found. */
+/**
+ * Read every open .xml for the .model files it lists (call after rebuildIndex). Returns problems found.
+ *
+ * Hair is the exception: a face folder's hair_*.model files are always loaded, unless the folder has a
+ * hair.xml, which then decides like any other .xml. They use the folder's hair.mtl, else its face.mtl.
+ */
 export async function readModelLists() {
   const lists = new Map(), problems = [];
   for (const xml of allPaths().filter((p) => /\.xml$/i.test(p))) {
@@ -81,11 +86,29 @@ export async function readModelLists() {
       lists.set(path.toLowerCase(), { path, mtl: entry.mtl ? openPathFrom(dir, entry.mtl) : null, type: entry.type, xml });
     }
   }
+  for (const dir of faceFolders()) {
+    const inDir = (name) => index.real(`${dir ? `${dir}/` : ''}${name}`);
+    if (inDir('hair.xml')) continue;
+    const mtl = inDir('hair.mtl') || inDir('face.mtl');
+    for (const path of index.filesIn(dir).filter((p) => /^hair_.*\.model$/i.test(fileOf(p)))) {
+      if (!lists.has(path.toLowerCase())) lists.set(path.toLowerCase(), { path, mtl, type: 'hair', xml: null });
+    }
+  }
   listedModels = lists;
   return problems;
 }
 
-/** Whether a path is a model the viewer loads: any .fmdl, or a .model an .xml lists. */
+/** Face folders: those with a face.xml, and any folder directly inside a Faces folder. */
+function faceFolders() {
+  const dirs = new Set();
+  for (const path of allPaths()) {
+    const dir = dirOf(path);
+    if (/^face\.xml$/i.test(fileOf(path)) || /^faces$/i.test(fileOf(dirOf(dir)))) dirs.add(dir);
+  }
+  return dirs;
+}
+
+/** Whether a path is a model the viewer loads: any .fmdl, or a .model an .xml lists (or face-folder hair). */
 export const isModelPath = (path) => /\.fmdl$/i.test(path) || listedModels.has(normPath(path).toLowerCase());
 
 /**

@@ -50,7 +50,11 @@ async function readPreFoxModel(path, problems) {
   const parsed = await parseModel(await readFile(path));
   const listing = listedModels.get(path.toLowerCase());
   let mtl = null;
-  if (!listing?.mtl) problems.push(`${fileOf(path)}: its .xml assigns no .mtl, so it has no materials`);
+  if (!listing?.mtl) {
+    problems.push(listing && !listing.xml
+      ? `${fileOf(path)}: no hair.mtl or face.mtl next to it, so it has no materials`
+      : `${fileOf(path)}: its .xml assigns no .mtl, so it has no materials`);
+  }
   else {
     try { mtl = parseMtl(await readGameText(listing.mtl)); }
     catch (e) { problems.push(`${fileOf(path)}: couldn't read ${fileOf(listing.mtl)}${isGone(e) || /is not open/.test(e.message) ? ' (not found)' : `: ${e.message}`}`); }
