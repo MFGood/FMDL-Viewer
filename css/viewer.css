@@ -98,22 +98,21 @@ button.icon[aria-expanded="true"] {
   border-color: var(--accent);
 }
 
-/* Settings: a panel under the cog button, over the viewport, so changes show as they're made. */
+/* Settings: laid exactly over the details pane (the last grid column), which keeps its scroll position
+   underneath; the viewport stays in view, so changes show as they're made. Full screen on phones. */
 #settings {
   position: absolute;
-  top: calc(100% + 6px);
-  right: 16px;
-  width: min(320px, calc(100vw - 32px));
-  max-height: calc(100vh - 90px);
+  grid-column: -2 / -1;
+  grid-row: 1;
+  inset: 0;
+  z-index: 1;
   overflow: auto;
   display: flex;
   flex-direction: column;
   gap: 18px;
-  padding: 12px 16px 16px;
+  padding: 14px 16px;
   background: var(--panel);
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: 0 10px 30px rgb(0 0 0 / .25);
+  border-left: 1px solid var(--line);
 }
 
 .settings-head {
@@ -203,6 +202,7 @@ main {
   display: grid;
   grid-template-columns: 1fr 300px;
   min-height: 0;
+  position: relative;
 }
 
 main.has-team {
@@ -625,5 +625,10 @@ button.player:hover {
   #team {
     border-right: 0;
     border-top: 1px solid var(--line);
+  }
+  #settings {
+    position: fixed;
+    z-index: 3;
+    border-left: 0;
   }
 }

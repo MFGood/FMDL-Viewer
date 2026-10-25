@@ -1,6 +1,7 @@
 // settings.js — the settings panel behind the cog button in the header: the global settings (display
-// options, default models, navigation). It stays open over the viewport so changes show as they're made;
-// Esc, a click outside or the cog again closes it.
+// options, default models, navigation). It's laid over the details pane, which keeps its scroll position
+// underneath, and leaves the viewport in view so changes show as they're made. Esc, the close button, a
+// click outside or the cog again closes it.
 
 import { $, buttonRow } from '../core/dom.js';
 import { state } from '../core/state.js';

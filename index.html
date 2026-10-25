@@ -27,53 +27,6 @@
   <button id="settingsButton" type="button" class="icon" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settings">
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.3 7.3 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .2.2.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
   </button>
-  <div id="settings" role="dialog" aria-label="Settings" hidden>
-    <div class="settings-head">
-      <h2>Settings</h2>
-      <button type="button" id="settingsClose" aria-label="Close settings">×</button>
-    </div>
-    <section>
-      <h2>Display</h2>
-      <div class="toggles">
-        <label class="chk"><input type="checkbox" id="tTex" checked> Textures</label>
-        <label class="chk"><input type="checkbox" id="tWire"> Wireframe</label>
-        <label class="chk"><input type="checkbox" id="tBack"> Back faces</label>
-        <label class="chk"><input type="checkbox" id="tBox"> Bounding boxes</label>
-        <label class="chk"><input type="checkbox" id="tBones"> Bone positions</label>
-        <label class="chk"><input type="checkbox" id="tAnim" checked> Animate UV scroll / step</label>
-        <label class="chk" title="A simple run cycle on the full PES skeleton, to see how the model's weights deform."><input type="checkbox" id="tRun"> Run animation</label>
-        <label class="chk"><input type="checkbox" id="tGrid" checked> Ground grid</label>
-        <label class="chk" title="The key and mouse hints for switching players and kits and for moving the view. The full list stays under Navigation."><input type="checkbox" id="tHints" checked> Control hints</label>
-        <div class="chk-row">
-          <label class="chk"><input type="checkbox" id="tBg"> Custom background</label>
-          <input type="color" id="bgColor" value="#808080" aria-label="Background colour" title="Background colour">
-        </div>
-        <label class="chk" title="Stray meshes are pieces of geometry well away from the rest of the model. They're always drawn; unticked, framing leaves them out."><input type="checkbox" id="tStray"> Frame stray meshes <span id="strayCount"></span></label>
-        <label class="chk"><input type="checkbox" id="tBlur"> Hidden meshes (anti-blur, invisible)</label>
-        <label class="chk" title="As in PES, a vertex whose bone weights total less or more than 1 is pulled toward or pushed away from the origin; with no weight it sits at the origin."><input type="checkbox" id="tWeight" checked> PES weight scaling</label>
-      </div>
-    </section>
-    <section>
-      <h2>Default models</h2>
-      <div class="toggles">
-        <label class="chk" title="Players in an export with no boots model get the default PES body (and hands, if they have no gloves). Players with their own boots can turn it on under This player."><input type="checkbox" id="tDefaults" checked> Auto-add default boots and hands</label>
-      </div>
-      <p class="hint settings-label">Fox players (.fmdl)</p>
-      <div class="kits" id="defaultVersionsFox"></div>
-      <p class="hint settings-label">Pre-Fox players (.model)</p>
-      <div class="kits" id="defaultVersionsPreFox"></div>
-    </section>
-    <section>
-      <h2>Navigation</h2>
-      <div class="kits" id="navSchemes"></div>
-      <p class="hint">
-        <kbd>1</kbd> <kbd>3</kbd> <kbd>7</kbd> front / right / top (<kbd>Ctrl</kbd> for the opposite) ·
-        <kbd>5</kbd> perspective / orthographic · <kbd>9</kbd> turn around ·
-        <kbd>4</kbd> <kbd>6</kbd> <kbd>8</kbd> <kbd>2</kbd> orbit 15° ·
-        <kbd>.</kbd> frame model · <kbd>+</kbd> <kbd>−</kbd> zoom
-      </p>
-    </section>
-  </div>
 </header>
 <main id="main">
   <aside id="team" hidden>
@@ -131,6 +84,53 @@
       <p class="hint">Green dot: texture found. Amber: missing. Grey: not drawn by the viewer (normal and specular maps).</p>
     </section>
   </aside>
+  <div id="settings" role="dialog" aria-label="Settings" hidden>
+    <div class="settings-head">
+      <h2>Settings</h2>
+      <button type="button" id="settingsClose" aria-label="Close settings">×</button>
+    </div>
+    <section>
+      <h2>Display</h2>
+      <div class="toggles">
+        <label class="chk"><input type="checkbox" id="tTex" checked> Textures</label>
+        <label class="chk"><input type="checkbox" id="tWire"> Wireframe</label>
+        <label class="chk"><input type="checkbox" id="tBack"> Back faces</label>
+        <label class="chk"><input type="checkbox" id="tBox"> Bounding boxes</label>
+        <label class="chk"><input type="checkbox" id="tBones"> Bone positions</label>
+        <label class="chk"><input type="checkbox" id="tAnim" checked> Animate UV scroll / step</label>
+        <label class="chk" title="A simple run cycle on the full PES skeleton, to see how the model's weights deform."><input type="checkbox" id="tRun"> Run animation</label>
+        <label class="chk"><input type="checkbox" id="tGrid" checked> Ground grid</label>
+        <label class="chk" title="The key and mouse hints for switching players and kits and for moving the view. The full list stays under Navigation."><input type="checkbox" id="tHints" checked> Control hints</label>
+        <div class="chk-row">
+          <label class="chk"><input type="checkbox" id="tBg"> Custom background</label>
+          <input type="color" id="bgColor" value="#808080" aria-label="Background colour" title="Background colour">
+        </div>
+        <label class="chk" title="Stray meshes are pieces of geometry well away from the rest of the model. They're always drawn; unticked, framing leaves them out."><input type="checkbox" id="tStray"> Frame stray meshes <span id="strayCount"></span></label>
+        <label class="chk"><input type="checkbox" id="tBlur"> Hidden meshes (anti-blur, invisible)</label>
+        <label class="chk" title="As in PES, a vertex whose bone weights total less or more than 1 is pulled toward or pushed away from the origin; with no weight it sits at the origin."><input type="checkbox" id="tWeight" checked> PES weight scaling</label>
+      </div>
+    </section>
+    <section>
+      <h2>Default models</h2>
+      <div class="toggles">
+        <label class="chk" title="Players in an export with no boots model get the default PES body (and hands, if they have no gloves). Players with their own boots can turn it on under This player."><input type="checkbox" id="tDefaults" checked> Auto-add default boots and hands</label>
+      </div>
+      <p class="hint settings-label">Fox players (.fmdl)</p>
+      <div class="kits" id="defaultVersionsFox"></div>
+      <p class="hint settings-label">Pre-Fox players (.model)</p>
+      <div class="kits" id="defaultVersionsPreFox"></div>
+    </section>
+    <section>
+      <h2>Navigation</h2>
+      <div class="kits" id="navSchemes"></div>
+      <p class="hint">
+        <kbd>1</kbd> <kbd>3</kbd> <kbd>7</kbd> front / right / top (<kbd>Ctrl</kbd> for the opposite) ·
+        <kbd>5</kbd> perspective / orthographic · <kbd>9</kbd> turn around ·
+        <kbd>4</kbd> <kbd>6</kbd> <kbd>8</kbd> <kbd>2</kbd> orbit 15° ·
+        <kbd>.</kbd> frame model · <kbd>+</kbd> <kbd>−</kbd> zoom
+      </p>
+    </section>
+  </div>
 </main>
 </body>
 </html>
