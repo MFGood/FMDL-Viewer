@@ -1,0 +1,36 @@
+<materialset>
+    <material name="hairTubeShader" shader="Hair">
+        <sampler name="DiffuseMap" path="./hair_col.dds" srgb="1" minfilter="linear" magfilter="linear" mipfilter="linear" uaddr="clamp" vaddr="clamp" waddr="wrap" maxaniso="2" />
+        <sampler name="SpecularMap" path="./hair_spe.dds" srgb="0" minfilter="linear" magfilter="linear" mipfilter="linear" uaddr="wrap" vaddr="wrap" waddr="wrap" maxaniso="2" />
+        <state name="alpharef" value="0" />
+        <state name="blendmode" value="0" />
+        <state name="alphablend" value="1" />
+        <state name="alphatest" value="0" />
+        <state name="twosided" value="1" />
+        <state name="ztest" value="1" />
+        <state name="zwrite" value="1" />
+    </material>
+    <material name="head_phong" shader="Wrinkle">
+        <sampler name="DiffuseMap" path="./face.dds" srgb="1" minfilter="linear" magfilter="linear" mipfilter="linear" uaddr="clamp" vaddr="clamp" waddr="wrap" maxaniso="2" />
+        <sampler name="NormalMap" path="./face_normal.dds" srgb="0" minfilter="linear" magfilter="linear" mipfilter="linear" uaddr="clamp" vaddr="clamp" waddr="wrap" maxaniso="2" />
+        <sampler name="SpecularMap" path="./face_specular_roughness.dds" srgb="0" minfilter="linear" magfilter="linear" mipfilter="linear" uaddr="clamp" vaddr="clamp" waddr="wrap" maxaniso="2" />
+        <state name="alpharef" value="0" />
+        <state name="blendmode" value="0" />
+        <state name="alphablend" value="0" />
+        <state name="alphatest" value="0" />
+        <state name="twosided" value="0" />
+        <state name="ztest" value="1" />
+        <state name="zwrite" value="1" />
+    </material>
+    <material name="hairparts_htShader" shader="Hair">
+        <sampler name="DiffuseMap" path="./hair_parts_col.dds" srgb="1" minfilter="linear" magfilter="linear" mipfilter="linear" uaddr="wrap" vaddr="wrap" waddr="wrap" maxaniso="2" />
+        <sampler name="SpecularMap" path="./hair_parts_spe.dds" srgb="0" minfilter="linear" magfilter="linear" mipfilter="linear" uaddr="wrap" vaddr="wrap" waddr="wrap" maxaniso="2" />
+        <state name="alpharef" value="254" />
+        <state name="blendmode" value="0" />
+        <state name="alphablend" value="0" />
+        <state name="alphatest" value="1" />
+        <state name="twosided" value="1" />
+        <state name="ztest" value="1" />
+        <state name="zwrite" value="1" />
+    </material>
+</materialset>
