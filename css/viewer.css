@@ -723,3 +723,51 @@ button.player:hover {
     border-left: 0;
   }
 }
+
+/* body shape */
+.body-sliders {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) 2.5em;
+  gap: 2px 10px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.body-sliders input[type=range] {
+  width: 100%;
+  accent-color: var(--accent);
+}
+
+.body-sliders output {
+  font: 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+/* the export's team in the save file */
+.save-link {
+  padding: 10px 16px 12px;
+  border-bottom: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+}
+
+.save-link-row {
+  display: flex;
+  gap: 6px;
+}
+
+.save-link-row input {
+  flex: 1;
+  min-width: 0;
+  font: inherit;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: inherit;
+}
+
+#bodyNote {
+  margin-top: 6px;
+}

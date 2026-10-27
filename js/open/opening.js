@@ -12,6 +12,7 @@ import {
 import { setStatus, flashStatus, showError, hideError, forgetDismissedErrors } from '../core/notices.js';
 import { state } from '../core/state.js';
 import { normPath, fileOf, scanExport } from '../formats/aet.js';
+import { linkSaveTeam } from '../export/save-team.js';
 import { DEFAULTS, DEFAULT_FILES, playerSettings } from '../export/players.js';
 import { forgetTextures } from '../scene/textures.js';
 import { cameraView } from '../scene/framing.js';
@@ -65,6 +66,7 @@ async function openExport(label) {
   setStatus('Reading export…');
   const listProblems = await readModelLists();
   state.aet = await scanExport(index, readText, isModelPath);
+  linkSaveTeam();
   if (!state.aet) {
     setStatus(null);
     // Not an export: show any models it contains as loose files.

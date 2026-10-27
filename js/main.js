@@ -14,7 +14,7 @@ import { initKeyboardCamera, updateKeyboardCamera } from './scene/keyboard-camer
 import { navigationScheme, setNavigationScheme, updateNavigation } from './scene/navigation.js';
 import { updateUvAnimations } from './scene/materials.js';
 import { followRig } from './scene/overlays.js';
-import { running, poseRun, currentRig } from './animation/rig.js';
+import { running, rigged, poseRun, currentRig } from './animation/rig.js';
 import {
   refreshMaterials, applyVisibility, applyWireframe, applyWeightOption, applyRunOption, applyTheme, stepKit,
 } from './viewer.js';
@@ -145,7 +145,8 @@ function loop() {
   updateKeyboardCamera(dt);
   updateNavigation(dt);
   updateUvAnimations(now);
-  if (running()) { poseRun(now); followRig(currentRig()); }
+  if (running()) poseRun(now);
+  if (rigged()) followRig(currentRig());
   render();
   requestAnimationFrame(loop);
 }

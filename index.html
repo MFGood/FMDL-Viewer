@@ -39,6 +39,13 @@
         <div class="team-meta" id="teamMeta"></div>
       </div>
     </div>
+    <form class="save-link" id="saveLink" hidden>
+      <p class="hint" id="saveLinkText"></p>
+      <div class="save-link-row" id="saveLinkRow">
+        <input type="text" id="saveTeamId" inputmode="numeric" placeholder="Team ID" autocomplete="off" spellcheck="false">
+        <button type="submit" class="btn">Use</button>
+      </div>
+    </form>
     <h2 class="roster-h">Players</h2>
     <p class="hint roster-hint control-hint"><kbd>Ctrl</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> for the previous / next player</p>
     <div class="roster" id="roster"></div>
@@ -70,6 +77,11 @@
         <label class="chk"><input type="checkbox" id="tPlayerDefaults"> Add default boots and hands</label>
       </div>
       <p class="hint" id="playerDefaultsNote"></p>
+    </section>
+    <section id="bodySection" hidden>
+      <h2>Body shape</h2>
+      <div class="body-sliders" id="bodySliders"></div>
+      <p class="hint" id="bodyNote"></p>
     </section>
     <section id="skinSection" hidden>
       <h2>Skin colour</h2>

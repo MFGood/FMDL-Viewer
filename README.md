@@ -15,8 +15,9 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / `dummy_kit` style texture). The kit you pick stays selected as you move between players.
 - **Default models:** players with only a face model are shown with a default PES boots model and gloves, from PES 17 or PES 21 (picked under Default models in the settings; Pre-Fox players keep their own choice, PES 17 to start with). Skin color can be picked per player (`skin_color`, `thigh_bsm` and `arm_bsm` textures follow it; when they're found as named next to the model, they're offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player. For Pre-Fox players, an `oral_body.model`, `oral_boots.model` or `oral_kit.model` their face folder's `.xml` lists counts as their own body, and a `gloveL` / `gloveR` entry replaces just that default hand (an entry whose file is missing doesn't count).
 - **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton. The helper bones (shorts panels, sleeves, shoulders, collar, elbows, wrists) are placed the way PES places them, using driver formulas ported from the game, so kits deform as they do in game.
+- **Body shape:** PES's 14 physique settings (neck length and size, shoulder height and width, chest, waist, arm size and length, thigh, calf, leg length, head length, width and depth) as sliders, −7 to +7 as in the game's edit menu, per player. They scale the skeleton's bones the way PES 2016 does, using the per-bone scale tables read out of its executable; the body stands at rest with them, or runs with the run animation on.
 - **Settings:** the cog at the top right opens the global settings: display options, default models, a PES save file and navigation. They're remembered in this browser between visits.
-- **Save files:** load a PES 15–21 save (`EDIT.bin` for PES 15, `EDIT00000000` for PES 16–21) under Save file in the settings. It's kept in this browser (IndexedDB) and read again on the next visit, until you forget it.
+- **Save files:** load a PES 15–21 save (`EDIT.bin` for PES 15, `EDIT00000000` for PES 16–21) under Save file in the settings. It's kept in this browser (IndexedDB) and read again on the next visit, until you forget it. An open export is matched to the save's team by the team name in its note (then the note's `ID:` line, then a team ID you give, remembered for that team name); its players then show their names from the save, and their body shape sliders are their settings in the save. Moving a slider edits the save kept in this browser.
 - **Display options:**
   - Draw backfaces toggle
   - Bone overlay
@@ -74,6 +75,7 @@ js/
     pes_save.js            PES 15–21 save files (EDIT.bin / EDIT00000000): read and write players and teams
   export/
     players.js             per-player rules: default models, skin colour, roster names
+    save-team.js           the open export's team in the save file, and its players there
     texture-lookup.js      which file a texture reference resolves to; kit choice
   scene/
     stage.js               three.js renderer, scene, camera, lights, grid
@@ -88,11 +90,13 @@ js/
     quat.js                vector / quaternion helpers
     run-cycle.js           procedural run cycle on the PES skeleton
     helper-bones.js        PES's helper-bone drivers (shorts, sleeves, shoulders, collar…), ported from the game
-    rig.js                 skinned copies of the meshes, driven by the run cycle
+    body-shape.js          PES's physique settings as per-bone scales, from the game's tables
+    rig.js                 skinned copies of the meshes, driven by the run cycle and body shape
   ui/
     details.js             right-hand panel: counts, kits, skin colour, model tree, materials
     team.js                left-hand panel: team, players, switching players
     settings.js            settings panel (cog button): display options, default models, navigation
+    body-shape.js          the Body shape sliders
   open/
     gather.js              what was dropped or picked, as files
     archives.js            .zip (JSZip) and .7z / .rar (7-Zip) reading
@@ -100,7 +104,7 @@ js/
 workers/sevenzip-worker.js 7-Zip extraction, off the main thread
 vendor/7zip/               7-Zip compiled to WebAssembly (loaded only for .7z / .rar)
 assets/
-  pes-skeleton.json        full PES skeleton (loaded when the run animation is first turned on)
+  pes-skeleton.json        full PES skeleton (loaded when the run animation or a body shape is first turned on)
   pes-bind-frames.json     bind orientations of the PES bones, for the helper-bone drivers
   defaults/                default body, hands and skin textures (loaded when a player needs them)
   sample/                  the example model shown at start-up

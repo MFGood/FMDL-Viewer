@@ -79,20 +79,24 @@ export function gearSlot(id) {
  * Read an export's structure. `readText(path)` returns a file's text (async); `isModel(path)` says which
  * files are models to show (.fmdl, and Pre-Fox .model files their .xml lists). The players' `fmdls`
  * lists hold both kinds.
- * Returns { root, teamName, notePath, logoPath, kitDir, commonDir, players, collars }.
+ * Returns { root, teamName, teamId, notePath, logoPath, kitDir, commonDir, players, collars }.
  */
 export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.test(p)) {
   const root = findRoot(index);
   if (root === null) return null;
   const folder = (name) => index.subdir(root, name);
-  const out = { root, teamName: null, notePath: null, logoPath: null, kitDir: folder('Kit Textures'), commonDir: folder('Common'), players: [], collars: [] };
+  const out = { root, teamName: null, teamId: null, notePath: null, logoPath: null, kitDir: folder('Kit Textures'), commonDir: folder('Common'), players: [], collars: [] };
 
-  // Team note: a .txt at the top level, preferring one with "note" in its name. First "Team:" line.
+  // Team note: a .txt at the top level, preferring one with "note" in its name. First "Team:" line, and the
+  // "ID:" line under it if there is one.
   const txts = index.filesIn(root).filter((p) => /\.txt$/i.test(p)).sort((a, b) => /note/i.test(fileOf(b)) - /note/i.test(fileOf(a)));
   for (const p of txts) {
     const text = await readText(p);
     const m = /^\s*team\s*:\s*(.*?)\s*$/im.exec(text);
-    if (m && m[1]) { out.teamName = m[1]; out.notePath = p; break; }
+    if (m && m[1]) {
+      Object.assign(out, { teamName: m[1], notePath: p, teamId: /^\s*id\s*:\s*(\d+)\s*$/im.exec(text)?.[1] ?? null });
+      break;
+    }
     if (!out.notePath) out.notePath = p;
   }
 

@@ -8,7 +8,7 @@ import { state } from '../core/state.js';
 import { showError } from '../core/notices.js';
 import { openSave, restoreSave, forgetSave } from '../core/save.js';
 import { DEFAULT_VERSIONS, defaultVersion, setDefaultVersion, isDefaultModel, isPreFox } from '../export/players.js';
-import { reloadForDefaults } from './team.js';
+import { reloadForDefaults, refreshSaveLink } from './team.js';
 
 const panel = () => $('settings');
 const isOpen = () => !panel().hidden;
@@ -40,6 +40,7 @@ export function renderDefaultVersions() {
 /** The Save file section: what's loaded, or what to load. note is added after it. */
 function renderSave(note = '') {
   const save = state.save;
+  refreshSaveLink(); // the open export's team in this save
   $('saveForget').hidden = !save;
   if (!save) {
     $('saveInfo').textContent = 'An EDIT00000000 (PES 16–21) or EDIT.bin (PES 15). It stays loaded in this browser between visits.';

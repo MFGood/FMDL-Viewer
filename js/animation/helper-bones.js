@@ -197,6 +197,9 @@ const DRIVERS = [
 ].flatMap(([target, ...rest]) => (target.includes('{s}') ? ['l', 'r'] : [''])
   .map((side) => ({ side, target: target.replace('{s}', side), handler: rest[2], names: [rest[0], rest[1], rest[3], rest[4]].map((n) => n?.replace('{s}', side)) })));
 
+/** The bone each driven helper follows: Map helper -> source. */
+export const HELPER_SOURCES = new Map(DRIVERS.map(({ target, names: [source] }) => [target, source]));
+
 const _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
 const toQ = (q) => _q.set(q[0], q[1], q[2], q[3]);
 const trs = (p, q, s = [1, 1, 1]) => new THREE.Matrix4().compose(_v.set(p[0], p[1], p[2]), toQ(q), _s.set(s[0], s[1], s[2]));

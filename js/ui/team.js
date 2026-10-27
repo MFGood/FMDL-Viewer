@@ -10,6 +10,9 @@ import { decodeToRGBA } from '../formats/block-decode.js';
 import { modelsFor, playerTitle, playerSummary, viewedPlayer, twoDigits } from '../export/players.js';
 import { loadModels, showNoModels } from '../viewer.js';
 import { renderPlayerPanel } from './details.js';
+import { renderBodyPanel } from './body-shape.js';
+import { linkSaveTeam, useTeamId } from '../export/save-team.js';
+import { applyBodyShapeOption } from '../viewer.js';
 import { captureView } from '../open/opening.js';
 
 // ---------------------------------------------------------------- portraits
@@ -69,11 +72,71 @@ function playerRow(player) {
   return row;
 }
 
+// ---------------------------------------------------------------- the team in the save file
+
+let changingTeam = false; // the team ID field is open over a linked team
+
+/** The export's team in the save file: which one it's linked to, or a field for its team ID. */
+function renderSaveLink() {
+  const link = state.saveLink, box = $('saveLink');
+  box.hidden = !link;
+  if (!link) return;
+  const text = $('saveLinkText');
+  text.textContent = '';
+  const asking = link.unmatched || changingTeam;
+  $('saveLinkRow').hidden = !asking;
+  if (link.team && !changingTeam) {
+    const change = el('button', { type: 'button', class: 'linkish' }, 'Change');
+    change.addEventListener('click', () => { changingTeam = true; renderSaveLink(); $('saveTeamId').focus(); });
+    text.append(`Names and body shapes from ${link.team.name} (ID ${link.team.id}) in ${state.save.name}. `, change);
+    return;
+  }
+  const name = state.aet.teamName;
+  text.append(link.team ? `Which team ID in ${state.save.name} is this export? It's ${link.team.name} (ID ${link.team.id}) now.`
+    : link.ambiguous ? `More than one team in ${state.save.name} is called ${name}. Which team ID is this export?`
+    : name ? `No team called ${name} in ${state.save.name}. Which team ID is this export?`
+      : `This export's note gives no team name. Which team ID in ${state.save.name} is it?`);
+}
+
+$('saveLink').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const input = $('saveTeamId');
+  if (!useTeamId(input.value)) {
+    $('saveLinkText').textContent = `${state.save.name} has no team with ID ${input.value.trim() || '(empty)'}. Which team ID is this export?`;
+    input.select();
+    return;
+  }
+  input.value = '';
+  changingTeam = false;
+  await showSaveLink();
+});
+
+/** Show the export's link to the save as it is now: names in the roster, the body shape. */
+async function showSaveLink() {
+  await renderTeam();
+  if (state.activePlayer?.row) markActive(state.activePlayer);
+  const player = viewedPlayer();
+  if (player) $('fileName').textContent = `${state.aet.teamName ? `${state.aet.teamName} · ` : ''}${playerTitle(player)}`;
+  renderPlayerPanel();
+  renderBodyPanel();
+  await applyBodyShapeOption();
+}
+
+/** Link the open export with the save file again (after either changes), and show it. */
+export async function refreshSaveLink() {
+  changingTeam = false;
+  linkSaveTeam();
+  await showSaveLink();
+}
+
+// ---------------------------------------------------------------- the panel
+
 /** Show the team panel for the open export (or hide it when there isn't one). */
 export async function renderTeam() {
   const { aet } = state;
   $('team').hidden = !aet;
   $('main').classList.toggle('has-team', !!aet);
+  renderSaveLink();
   if (!aet) return;
   await renderHeader();
   const roster = $('roster');

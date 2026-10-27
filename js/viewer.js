@@ -19,8 +19,9 @@ import { makeMaterial, clearAnimated, texturesNeeded } from './scene/materials.j
 import { loadTexture, isDecoded } from './scene/textures.js';
 import { buildBoxes, buildBones } from './scene/overlays.js';
 import { frameModel, restoreCameraView } from './scene/framing.js';
-import { startRun, stopRun, running, applySkinWeights } from './animation/rig.js';
+import { startRun, stopRun, rigged, wantRig, poseRun, applySkinWeights } from './animation/rig.js';
 import { renderTree, renderMaterials, renderKits, renderSkins, renderPlayerPanel, renderStats } from './ui/details.js';
+import { renderBodyPanel } from './ui/body-shape.js';
 import { forgetFiles } from './open/opening.js';
 
 // ---------------------------------------------------------------- loading models
@@ -114,7 +115,7 @@ export async function loadModels(paths, label, player = null, notes = []) {
   clearModels();
   for (const item of loaded) addModel(item, player);
   $('fileName').textContent = label;
-  if (options.run) await startRun();
+  if (wantRig()) await startRun();
   buildBoxes();
   buildBones();
   applyVisibility();
@@ -123,6 +124,7 @@ export async function loadModels(paths, label, player = null, notes = []) {
   if (state.pendingRestore?.camera) restoreCameraView(state.pendingRestore.camera);
   else frameModel();
   renderPlayerPanel();
+  renderBodyPanel();
   if (problems.length) showError(problems.join(' · '));
   else hideError();
   await refreshMaterials();
@@ -178,7 +180,7 @@ export function selectSkin(n) {
 
 /** Show or hide meshes per the model tree and options, then update the counts. */
 export function applyVisibility() {
-  const animating = running();
+  const animating = rigged();
   for (const m of state.meshObjects) {
     m.shown = m.model.visible && m.groupVisible && (options.hiddenMeshes || !m.obj.userData.hiddenByFile);
     m.obj.visible = m.shown && !(animating && m.skinned);
@@ -197,10 +199,17 @@ export function applyWeightOption() {
   renderStats(); // scaled positions can move pieces apart or together
 }
 
+/** Build or drop the rig as the run animation and body shape need it. */
 export async function applyRunOption() {
-  if (options.run) await startRun();
+  if (wantRig()) await startRun();
   else { stopRun(); buildBones(); }
   applyVisibility();
+}
+
+/** Show a changed body shape: on the rig if there is one, building or dropping the rig as needed. */
+export async function applyBodyShapeOption() {
+  if (rigged() && wantRig()) poseRun(0);
+  else await applyRunOption();
 }
 
 /** Redraw what uses theme colours. */

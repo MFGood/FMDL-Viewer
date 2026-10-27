@@ -56,6 +56,25 @@ export async function restoreSave() {
   return state.save;
 }
 
+let keepTimer = null;
+/**
+ * Write edits made to the save's players back into it and keep it in this browser, a moment after the last
+ * edit (re-encrypting the whole save on every slider step would be wasteful).
+ */
+export function keepSaveEdits() {
+  clearTimeout(keepTimer);
+  const save = state.save, started = generation;
+  keepTimer = setTimeout(async () => {
+    if (state.save !== save || generation !== started) return;
+    try {
+      const bytes = save.parsed.save();
+      await (await database()).put(STORE, { name: save.name, bytes: bytes.buffer, savedAt: Date.now() }, KEY);
+    } catch (e) {
+      console.warn("Couldn't keep the edited save file in this browser:", e);
+    }
+  }, 500);
+}
+
 /** Drop the save, here and in this browser's storage. */
 export async function forgetSave() {
   generation++;
