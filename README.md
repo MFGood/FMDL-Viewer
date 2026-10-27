@@ -15,7 +15,8 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / `dummy_kit` style texture). The kit you pick stays selected as you move between players.
 - **Default models:** players with only a face model are shown with a default PES boots model and gloves, from PES 17 or PES 21 (picked under Default models in the settings; Pre-Fox players keep their own choice, PES 17 to start with). Skin color can be picked per player (`skin_color`, `thigh_bsm` and `arm_bsm` textures follow it; when they're found as named next to the model, they're offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player. For Pre-Fox players, an `oral_body.model`, `oral_boots.model` or `oral_kit.model` their face folder's `.xml` lists counts as their own body, and a `gloveL` / `gloveR` entry replaces just that default hand (an entry whose file is missing doesn't count).
 - **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton. The helper bones (shorts panels, sleeves, shoulders, collar, elbows, wrists) are placed the way PES places them, using driver formulas ported from the game, so kits deform as they do in game.
-- **Settings:** the cog at the top right opens the global settings: display options, default models and navigation. They're remembered in this browser between visits.
+- **Settings:** the cog at the top right opens the global settings: display options, default models, a PES save file and navigation. They're remembered in this browser between visits.
+- **Save files:** load a PES 15–21 save (`EDIT.bin` for PES 15, `EDIT00000000` for PES 16–21) under Save file in the settings. It's kept in this browser (IndexedDB) and read again on the next visit, until you forget it.
 - **Display options:**
   - Draw backfaces toggle
   - Bone overlay
@@ -61,7 +62,8 @@ js/
     files.js               virtual file system: every open file under a path, read on demand
     notices.js             status line and error box
     options.js             the Display checkboxes as an `options` object
-    state.js               what's being shown right now (models, export, player, kit)
+    state.js               what's being shown right now (models, export, player, kit, save file)
+    save.js                the PES save file loaded in the settings, kept in IndexedDB
   formats/
     fmdl.js                .fmdl model parser (port of pes-fmdl-blender's FmdlFile.py)
     model.js               Pre-Fox .model parser (port of pes-model-blender's ModelFile.py)
@@ -69,6 +71,7 @@ js/
     texture-files.js       .ftex / .dds readers (Ftex.py port)
     block-decode.js        DXT / BC4 / BC5 / BC7 decoding to RGBA
     aet.js                 aesthetics export layout: players, kits, texture lookup rules
+    pes_save.js            PES 15–21 save files (EDIT.bin / EDIT00000000): read and write players and teams
   export/
     players.js             per-player rules: default models, skin colour, roster names
     texture-lookup.js      which file a texture reference resolves to; kit choice

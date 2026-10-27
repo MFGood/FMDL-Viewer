@@ -15,6 +15,8 @@ export const state = {
   chosenKit: null,
   /** Skin colour (1–7) picked for models opened on their own, or null for the default. Export players each keep their own. */
   looseSkin: null,
+  /** The PES save loaded in the settings: { name, parsed } with parsed a SaveFile, or null. */
+  save: null,
   /** While a reload is reopening things: { player, kit, camera } to put back. */
   pendingRestore: null,
 };

@@ -241,7 +241,7 @@ class MersenneRNG {
   }
 }
 
-class SaveFile {
+export class SaveFile {
     constructor() {
         this.identifier = null;
         this.description = null;

@@ -135,6 +135,13 @@ button.icon[aria-expanded="true"] {
   margin: 8px 0 4px;
 }
 
+.save-file {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
 h1 {
   font: 700 20px/1 var(--display);
   letter-spacing: .02em;

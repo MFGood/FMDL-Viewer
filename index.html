@@ -11,7 +11,8 @@
   <script type="importmap">
   { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "idb": "https://cdn.jsdelivr.net/npm/idb@8.0.3/build/index.js"
   } }
   </script>
   <script type="module" src="js/main.js"></script>
@@ -119,6 +120,14 @@
       <div class="kits" id="defaultVersionsFox"></div>
       <p class="hint settings-label">Pre-Fox players (.model)</p>
       <div class="kits" id="defaultVersionsPreFox"></div>
+    </section>
+    <section>
+      <h2>Save file</h2>
+      <div class="save-file">
+        <label class="btn" for="saveInput">Load save…<input id="saveInput" type="file"></label>
+        <button type="button" id="saveForget" hidden>Forget</button>
+      </div>
+      <p class="hint" id="saveInfo"></p>
     </section>
     <section>
       <h2>Navigation</h2>
