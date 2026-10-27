@@ -9,7 +9,7 @@ import { state } from '../core/state.js';
 import { scene } from '../scene/stage.js';
 import { runPose } from './run-cycle.js';
 import { helperBoneMatrices } from './helper-bones.js';
-import { currentShape, applyBodyShape } from './body-shape.js';
+import { currentShape, applyBodyShape, shoulderHeightOf } from './body-shape.js';
 
 // The full PES skeleton (158 bones, root dsk_hip) from pes-fmdl-blender's PesSkeletonData.py, which took
 // the positions from PES's body / hand_l / hand_r / face .skl files: { name: { parent, pos: [x, y, z] } }.
@@ -190,7 +190,8 @@ export function poseRun(t) {
   rig.root.updateMatrixWorld(true);
   // Then the helper bones, as PES places them: each moves as the game's placement moves from rest (which
   // may scale it unevenly), set as a fixed local matrix under its parent; parents are done before children.
-  const helpers = helperBoneMatrices(rig.bones, bindFrames, rig.restWorld);
+  const shape = currentShape();
+  const helpers = helperBoneMatrices(rig.bones, bindFrames, rig.restWorld, shape ? shoulderHeightOf(shape) : 0);
   for (const [name, m] of helpers) m.multiply(rig.helperRest.get(name));
   const inverse = new THREE.Matrix4();
   for (const bone of rig.order) {
@@ -200,6 +201,5 @@ export function poseRun(t) {
     bone.matrix.copy(inverse.copy(bone.parent.matrixWorld).invert().multiply(world));
     bone.updateMatrixWorld(true);
   }
-  const shape = currentShape();
   if (shape) applyBodyShape(rig.order, bindFrames, shape);
 }

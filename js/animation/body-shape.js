@@ -8,8 +8,9 @@
 //
 // The scale is in the bone's own axes and isn't passed on to its children, but it does scale the offsets of
 // its children (so a wider shoulder moves the arm out, a longer belly lifts the chest): what the tables
-// assume, as every bone carries the same leg-length factor. Not done here: the game also hands the neck's
-// scale and the shoulder height to a few helper-bone drivers, which turn the collarbone area a little.
+// assume, as every bone carries the same leg-length factor. Shoulder height also goes to the collarbone and
+// collar drivers (helper-bones.js), which raise or lower the shoulder: no mesh is weighted to sk_shoulder,
+// so that's most of what it does. Not done here: the game also hands the neck's scale to a neck driver.
 
 import * as THREE from 'three';
 import { state } from '../core/state.js';
@@ -129,6 +130,9 @@ export function boneScales(shape) {
   }
   return scales;
 }
+
+/** Shoulder height for the game's collarbone and collar drivers: −1…+1 (see helperBoneMatrices). */
+export const shoulderHeightOf = (shape) => amount(shape, 'shoulderHeight');
 
 /** The size of the whole body: the game makes it larger as the legs get longer (at 180 cm). */
 export function overallScale(shape) {
