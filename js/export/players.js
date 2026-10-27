@@ -74,7 +74,7 @@ export const viewedPlayer = () => (state.aet && state.activePlayer && !state.act
 const listedTypes = (p) => (p?.fmdls || []).map((path) => ({ path, type: (listedModels.get(path.toLowerCase())?.type || '').toLowerCase() }));
 
 // Pre-Fox models a face folder's .xml lists to do without the Boots folder (a common trick).
-const ORAL_BODY_MODELS = ['oral_body', 'oral_boots', 'oral_kit'];
+const ORAL_BODY_MODELS = ['oral_body', 'oral_boots', 'oral_kit', 'oral_body_win32', 'oral_boots_win32', 'oral_kit_win32'];
 
 /**
  * A body model of the player's own: a Boots folder model, or an oral_body, oral_boots or oral_kit .model
