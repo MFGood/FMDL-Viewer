@@ -52,6 +52,27 @@ export class FileIndex {
 
 /* ---------- export layout ---------- */
 
+// The .fmdl names the game loads from a Fox face, boots or gloves folder, each optionally after a prefix and an
+// underscore ("lia_face_high.fmdl"), as the 4cc AET compiler allows them.
+const FOX_MODEL_NAMES = { face: ['face_high', 'hair_high', 'oral', 'fcl_hair'], boots: ['boots'], gloves: ['glove_l', 'glove_r'] };
+
+/**
+ * The models of a face, boots or gloves folder the game loads: every .model (an .xml or the folder's rules
+ * decide those), and the .fmdl files named as FOX_MODEL_NAMES has it, the first of each name; a face folder
+ * without fcl_hair also loads one .fmdl of any other name, which the compiler renames fcl_hair.
+ */
+function gameModels(paths, kind) {
+  const names = FOX_MODEL_NAMES[kind], seen = new Set(), odd = [], out = [];
+  for (const path of [...paths].sort()) {
+    if (!/\.fmdl$/i.test(path)) { out.push(path); continue; }
+    const s = stem(path), name = names.find((n) => s === n || s.endsWith(`_${n}`));
+    if (!name) odd.push(path);
+    else if (!seen.has(name)) { seen.add(name); out.push(path); }
+  }
+  if (kind === 'face' && !seen.has('fcl_hair') && odd.length === 1) out.push(odd[0]);
+  return out.sort();
+}
+
 /** The folder that holds "Kit Textures" (shallowest wins); falls back to one holding other AET folders. */
 export function findRoot(index) {
   const known = ['kit textures', 'faces', 'boots', 'gloves', 'logo', 'portraits', 'kit configs', 'common', 'collars'];
@@ -115,7 +136,7 @@ export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.te
     if (m) portraitsByNumber.set(+m[1], p);
   }
 
-  const fmdlsUnder = (dir) => index.filesUnder(dir).filter(isModel).sort();
+  const fmdlsUnder = (dir, kind) => gameModels(index.filesUnder(dir).filter(isModel), kind);
   const players = [];
 
   // Faces: "XXXnn - Player Name".
@@ -126,7 +147,7 @@ export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.te
     players.push({
       number: m ? +m[2] : null,
       name: cleanName(m ? m[3] || '' : fileOf(dir)) || null,
-      face: { dir, fmdls: fmdlsUnder(dir) },
+      face: { dir, fmdls: fmdlsUnder(dir, 'face') },
       portrait: files.find((p) => /portrait\.dds$/i.test(p)) || null,
     });
   }
@@ -142,7 +163,7 @@ export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.te
       const id = m ? m[1] : fileOf(dir);
       if (!gear.has(id)) gear.set(id, { id, name: null, boots: null, gloves: null });
       const g = gear.get(id);
-      g[kind] = { dir, fmdls: fmdlsUnder(dir) };
+      g[kind] = { dir, fmdls: fmdlsUnder(dir, kind) };
       const nm = cleanName(m ? m[2] || '' : '');
       if (nm && (!g.name || kind === 'boots')) g.name = nm;
     }
