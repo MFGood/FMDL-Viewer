@@ -4,7 +4,7 @@ import { index } from '../core/files.js';
 import { state } from '../core/state.js';
 import { resolveTexture, availableKits } from '../formats/aet.js';
 import { DEFAULTS, skinTexture, chosenSkin } from './players.js';
-import { ownSkinWins, customSkinTexture } from './in-game.js';
+import { ownSkinWins, customSkinTexture, saveHasCustomSkin } from './in-game.js';
 
 /** Where to look for a model's textures: its own folder, plus the export's shared folders. */
 export const lookupContext = (model) => ({
@@ -82,10 +82,11 @@ export const customSkinAvailable = () => firstCustomSkin() != null;
 
 /**
  * Skin colour (1–7) for a model's player, or for loose models when there's no player. Without a choice,
- * the custom skin when the loaded models have one, else 1.
+ * the custom skin when the loaded models have one, else 1. A custom skin in a PES 15–17 save stays custom
+ * without custom textures (the game then hides the default body's skin).
  */
 export function skinFor(player) {
-  const chosen = chosenSkin(player), custom = customSkinAvailable();
+  const chosen = chosenSkin(player), custom = customSkinAvailable() || (chosen === CUSTOM_SKIN && saveHasCustomSkin(player));
   if (chosen == null || (chosen === CUSTOM_SKIN && !custom)) return custom ? CUSTOM_SKIN : 1;
   return chosen;
 }

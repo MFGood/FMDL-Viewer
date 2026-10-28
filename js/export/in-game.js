@@ -110,6 +110,9 @@ export function inGameLook(player) {
   return { hidden, hands };
 }
 
+/** Whether the player's skin colour in the save can be custom (7, "C"): PES 15–17 have it, later games don't. */
+export const saveHasCustomSkin = (player) => !!savePlayerOf(player) && parseInt(state.save.parsed.pes) < 18;
+
 /**
  * Whether the player's own skin textures (arm_bsm, thigh_bsm, skin_color in their folders) win over their skin
  * colour: in PES 18 on, which has no custom skin colour, they always do (a transparent arm_bsm hides the hands).

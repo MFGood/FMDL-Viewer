@@ -14,7 +14,7 @@ import { offWeightCount } from '../scene/geometry.js';
 import { strayCount } from '../scene/framing.js';
 import { applyVisibility, selectKit, selectSkin } from '../viewer.js';
 import { reloadForDefaults } from './team.js';
-import { inGameLook, hiddenInWords } from '../export/in-game.js';
+import { inGameLook, hiddenInWords, saveHasCustomSkin } from '../export/in-game.js';
 
 /** Vertex, triangle and mesh counts for what's shown, and the stray-mesh count. */
 export function renderStats() {
@@ -37,16 +37,20 @@ export function renderKits() {
   buttonRow($('kits'), kits.map((kit) => ({ label: kitLabel(kit), on: kit === state.currentKit, onClick: () => selectKit(kit) })));
 }
 
-/** Skin colours 1–6 (plus 7 for custom skin textures), shown when a loaded mesh uses a skin texture. */
+/**
+ * Skin colours 1–6 (plus 7 for custom skin textures), shown when a loaded mesh uses a skin texture. A player
+ * linked to a PES 15–17 save always has the game's Custom skin colour too, as "C".
+ */
 export function renderSkins() {
   const used = state.meshObjects.some((m) => m.mesh.materialInstance.textures.some(([, ref]) => usesSkin(ref)));
   $('skinSection').hidden = !used;
   if (!used) { $('skins').textContent = ''; return; }
-  const current = skinFor(viewedPlayer());
+  const player = viewedPlayer(), current = skinFor(player), inSave = saveHasCustomSkin(player);
   const numbers = [1, 2, 3, 4, 5, 6];
-  if (customSkinAvailable()) numbers.push(CUSTOM_SKIN);
-  const title = (n) => (n === CUSTOM_SKIN ? 'custom skin textures' : `skin_color_${n}`);
-  buttonRow($('skins'), numbers.map((n) => ({ label: String(n), title: title(n), on: n === current, onClick: () => selectSkin(n) })));
+  if (inSave || customSkinAvailable()) numbers.push(CUSTOM_SKIN);
+  const label = (n) => (n === CUSTOM_SKIN && inSave ? 'C' : String(n));
+  const title = (n) => (n !== CUSTOM_SKIN ? `skin_color_${n}` : inSave ? 'Custom Skin' : 'custom skin textures');
+  buttonRow($('skins'), numbers.map((n) => ({ label: label(n), title: title(n), on: n === current, onClick: () => selectSkin(n) })));
 }
 
 /** "This player": default models for the viewed player, overriding the global setting (or the save's, when linked). */
