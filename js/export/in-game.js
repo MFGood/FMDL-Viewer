@@ -1,7 +1,8 @@
 // in-game.js — what PES shows of the default body for a player of an export linked to a team in the save file,
 // following the "FPC" (full player customisation) setups. The export's kit config turns a kit piece's model
-// into one that can be hidden (shirt model 176, shorts model 16, collar 105), and then each player's
-// appearance settings in the save show or hide it:
+// into one that can be hidden (shirt model 176, shorts model 16, collar 105; a kit without a config gets the
+// 4cc AET compiler's generic one, which is set up that way), and then each player's appearance settings in the
+// save show or hide it:
 //
 //   shirt      shirt model 176 and a tucked shirt hide it      sleeves  shirt model 176 and long sleeves
 //   shorts     shorts model 16 and a tucked shirt              socks    shorts model 16 and short socks
@@ -46,12 +47,12 @@ export async function readKitConfigs(aet) {
   return configs;
 }
 
-/** The kit config for the kit shown: its own, else the first kit of its type's. */
-function shownKitConfig() {
-  const configs = state.aet?.kitConfigs, kit = state.currentKit;
-  if (!configs?.size) return null;
-  return configs.get(kit) || configs.get(`${kit?.[0] === 'g' ? 'g' : 'p'}1`) || null;
-}
+// The 4cc AET compiler fills in a kit the export has no config for with its generic one
+// (templates/XXX_DEF_xxx_realUni.bin), which is set up for FPC.
+const GENERIC_KIT_CONFIG = { kit: null, shirt: 176, shorts: 16, collar: 105, winterCollar: 105 };
+
+/** The kit config for the kit shown: its own, else the compiler's generic one. */
+const shownKitConfig = () => state.aet?.kitConfigs?.get(state.currentKit) || GENERIC_KIT_CONFIG;
 
 // ---------------------------------------------------------------- the rules
 
@@ -92,11 +93,11 @@ export function inGameLook(player) {
   const pes = parseInt(state.save.parsed.pes), config = shownKitConfig();
   const hidden = new Set();
   const tucked = !own.untucked;
-  if (config?.shirt === 176) {
+  if (config.shirt === 176) {
     if (tucked) hidden.add('Kit Shirt');
     if (own.sleeve === 2) hidden.add('Kit Sleeves');
   }
-  if (config?.shorts === 16) {
+  if (config.shorts === 16) {
     if (tucked) hidden.add('Kit Shorts');
     if (own.socks === 2) hidden.add('Kit Socks');
   }
