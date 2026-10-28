@@ -128,12 +128,12 @@ export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.te
     out.logoPath = pngs.find((p) => /^emblem_0.{3}_r\.png$/i.test(fileOf(p))) || pngs.find((p) => /_r\.png$/i.test(p)) || pngs[0] || null;
   }
 
-  // Portraits folder: player_XXXnn.dds -> team number nn.
+  // Portraits folder: player_….dds, the last two digits the team number (01–23), as the 4cc AET compiler reads them.
   const portraitsByNumber = new Map();
   const portraitsDir = folder('Portraits');
   if (portraitsDir) for (const p of index.filesIn(portraitsDir)) {
-    const m = /^player_(?:[xX]{3})?(\d{2})\.dds$/i.exec(fileOf(p));
-    if (m) portraitsByNumber.set(+m[1], p);
+    const m = /^player_.*?(\d{2})\.dds$/i.exec(fileOf(p));
+    if (m && +m[1] >= 1 && +m[1] <= 23) portraitsByNumber.set(+m[1], p);
   }
 
   const fmdlsUnder = (dir, kind) => gameModels(index.filesUnder(dir).filter(isModel), kind);
@@ -159,8 +159,9 @@ export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.te
     const base = folder(folderName);
     if (!base) continue;
     for (const dir of index.subdirs(base)) {
-      const m = new RegExp(`^${letter}(\\d{4})(?:\\s*-\\s*(.*))?`, 'i').exec(fileOf(dir));
-      const id = m ? m[1] : fileOf(dir);
+      // The 4cc AET compiler pads a 3-digit gloves ID (g567 → g0567).
+      const m = new RegExp(`^${letter}(\\d{${letter === 'g' ? '3,4' : '4'}})(?!\\d)(?:\\s*-\\s*(.*))?`, 'i').exec(fileOf(dir));
+      const id = m ? m[1].padStart(4, '0') : fileOf(dir);
       if (!gear.has(id)) gear.set(id, { id, name: null, boots: null, gloves: null });
       const g = gear.get(id);
       g[kind] = { dir, fmdls: fmdlsUnder(dir, kind) };
