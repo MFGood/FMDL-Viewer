@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>faceHi slider check</title>
+<style>
+  :root { --bg: #15171a; --fg: #e8e8e8; --panel: rgba(20, 22, 26, 0.88); }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 13px system-ui, sans-serif; }
+  #ui { position: fixed; top: 10px; left: 10px; padding: 10px 12px; background: var(--panel); border-radius: 8px; max-width: 330px; }
+  #ui label { display: block; margin: 6px 0; }
+  select { max-width: 100%; }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js", "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/" } }</script>
+</head>
+<body>
+<!--
+  A check of the face slider chain (js/animation/face-shape.js) on faceHi.model: one slider at a time, colored
+  by how far each vertex moves from the neutral face. Serve the repository root and open this page from it.
+  scripts/ has the Python that read the chain out of PES2016.exe and built assets/defaults/face/face-shape.json.
+-->
+<div id="ui">
+  <b>faceHi driven by the face sliders</b>
+  <label>Slider <select id="slider"></select></label>
+  <label>Value <input id="value" type="range" min="0" max="14" step="1" value="7"> <output id="valueOut">0</output></label>
+  <label>Exaggerate <input id="amp" type="range" min="1" max="10" step="0.5" value="1"> <output id="ampOut">1×</output></label>
+  <label><input id="tWire" type="checkbox"> Wireframe</label>
+  <label><input id="tSide" type="checkbox"> Side view</label>
+  <div>Color: change from the neutral face (0 → gray, 5 mm → orange)</div>
+  <div id="stats"></div>
+</div>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { parseModel } from '../../js/formats/model.js';
+import { FACE_SETTINGS, loadFaceData, shapeFaceHi } from '../../js/animation/face-shape.js';
+
+await loadFaceData();
+const parsed = await parseModel(await (await fetch('../../assets/defaults/face/faceHi.model')).arrayBuffer());
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(devicePixelRatio); renderer.setSize(innerWidth, innerHeight); document.body.append(renderer.domElement);
+const scene = new THREE.Scene(); scene.background = new THREE.Color(0x15171a);
+const camera = new THREE.PerspectiveCamera(30, innerWidth / innerHeight, 0.01, 10);
+const controls = new OrbitControls(camera, renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x404050, 1.2));
+const light = new THREE.DirectionalLight(0xffffff, 1.2); light.position.set(0.5, 2, 1); scene.add(light);
+
+// The three meshes as one, as face-shape.json numbers the vertices.
+const counts = parsed.meshes.map((m) => m.vertices.count), n = counts.reduce((a, b) => a + b, 0);
+const pos = new Float32Array(n * 3), col = new Float32Array(n * 3), index = [];
+let offset = 0;
+for (const m of parsed.meshes) { for (const f of m.faces) index.push(f + offset); offset += m.vertices.count; }
+const geo = new THREE.BufferGeometry();
+geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('color', new THREE.BufferAttribute(col, 3)); geo.setIndex(index);
+const mat = new THREE.MeshStandardMaterial({ vertexColors: true, side: THREE.DoubleSide, roughness: 0.8 });
+scene.add(new THREE.Mesh(geo, mat));
+
+const gather = () => {
+  const out = new Float32Array(n * 3); let o = 0;
+  for (const m of parsed.meshes) { out.set(m.vertices.position, o); o += m.vertices.position.length; }
+  return out;
+};
+shapeFaceHi(parsed, {});
+const neutral = gather();
+
+const $ = (id) => document.getElementById(id);
+for (const { key, label, id } of FACE_SETTINGS) $('slider').add(new Option(`${label} (${id})`, key));
+const signed = (v) => (v > 7 ? `+${v - 7}` : v < 7 ? `−${7 - v}` : '0');
+function apply() {
+  const value = +$('value').value, amp = +$('amp').value;
+  $('valueOut').textContent = signed(value); $('ampOut').textContent = `${amp}×`;
+  shapeFaceHi(parsed, { [$('slider').value]: value });
+  const p = gather(); let max = 0;
+  for (let i = 0; i < n; i++) {
+    let d2 = 0;
+    for (let c = 0; c < 3; c++) { const k = i * 3 + c, d = p[k] - neutral[k]; pos[k] = neutral[k] + d * amp; d2 += d * d; }
+    const mm = Math.sqrt(d2) * 1000, t = Math.min(mm / 5, 1); max = Math.max(max, mm);
+    col[i * 3] = 0.72 + 0.28 * t; col[i * 3 + 1] = 0.72 - 0.2 * t; col[i * 3 + 2] = 0.75 - 0.55 * t;
+  }
+  geo.attributes.position.needsUpdate = true; geo.attributes.color.needsUpdate = true; geo.computeVertexNormals();
+  $('stats').textContent = `Largest change: ${max.toFixed(2)} mm`;
+}
+function aim() {
+  camera.position.set(...($('tSide').checked ? [0.46, 1.68, 0.09] : [0, 1.68, 0.55]));
+  controls.target.set(0, 1.67, 0.09); controls.update();
+}
+$('slider').addEventListener('input', apply);
+$('value').addEventListener('input', apply);
+$('amp').addEventListener('input', apply);
+$('tWire').addEventListener('input', (e) => (mat.wireframe = e.target.checked));
+$('tSide').addEventListener('input', aim);
+aim(); apply();
+addEventListener('resize', () => { camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); renderer.setSize(innerWidth, innerHeight); });
+renderer.setAnimationLoop(() => renderer.render(scene, camera));
+</script>
+</body>
+</html>

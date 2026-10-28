@@ -112,6 +112,7 @@ assets/
   pes-bind-frames.json     bind orientations of the PES bones, for the helper-bone drivers
   defaults/                default body, hands, editable face and skin textures (loaded when a player needs them)
   sample/                  the example model shown at start-up
+research/face-sliders/     a check page for the face sliders, and the scripts that read them out of PES 2016
 ```
 
 ## Libraries and credits
