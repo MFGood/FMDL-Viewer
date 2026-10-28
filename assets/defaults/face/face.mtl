@@ -1,0 +1,29 @@
+<materialset>
+	<material name="face_mat" shader="Wrinkle_Face">
+        <sampler name="DiffuseMap" path="./head_color_w.dds" srgb="1" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp"/> 
+		<sampler name="NormalMap" path="./face_normal.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<sampler name="Normal2" path="./head_normal_animation.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<sampler name="Mapping" path="./head_normal_mask.dds" srgb="1" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+    </material>
+    <material name="eyelash_mat" shader="LightMap"> 
+        <state name="ztest" value="1" /> 
+        <state name="zwrite" value="0" /> 
+        <state name="twosided" value="1" /> 
+        <state name="alphatest" value="1" /> 
+        <state name="alpharef" value="0" /> 
+        <state name="alphablend" value="1" /> 
+        <state name="blendmode" value="0" /> 
+        <sampler name="DiffuseMap" path="./face_eyelash.dds" srgb="1" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp"/> 
+    </material> 
+    <material name="eyeocclusion_lambert" shader="Overlay">
+        <state name="ztest" value="1" />
+        <state name="zwrite" value="0" />
+        <state name="twosided" value="0" />
+        <state name="alphatest" value="1" />
+        <state name="alpharef" value="0" />
+        <state name="alphablend" value="1" />
+        <state name="blendmode" value="0" />
+        <sampler name="DiffuseMap" path="./EyeOcclusion01.dds" srgb="1" minfilter="linear" magfilter="linear" uaddr="wrap" vaddr="clamp"/>
+        <vector name="DepthBias" x="0.005" y="0" z="0" w="0" />
+    </material>
+</materialset>
