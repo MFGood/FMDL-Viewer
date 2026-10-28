@@ -74,12 +74,13 @@ export const viewedPlayer = () => (state.aet && state.activePlayer && !state.act
 /** The .xml type of each of a player's Pre-Fox models ("parts", "gloveL"…), with the model's path. */
 const listedTypes = (p) => (p?.fmdls || []).map((path) => ({ path, type: (listedModels.get(path.toLowerCase())?.type || '').toLowerCase() }));
 
-// Pre-Fox models a face folder's .xml lists to do without the Boots folder (a common trick).
-const ORAL_BODY_MODELS = ['oral_body', 'oral_boots', 'oral_kit', 'oral_body_win32', 'oral_boots_win32', 'oral_kit_win32'];
+// Pre-Fox models a face folder's .xml lists to do without the Boots folder (a common trick), and parts_body,
+// which the 4cc AET compiler lists for a face folder without an .xml (as oral_parts_body_win32).
+const ORAL_BODY_MODELS = ['oral_body', 'oral_boots', 'oral_kit', 'oral_body_win32', 'oral_boots_win32', 'oral_kit_win32', 'parts_body', 'oral_parts_body_win32'];
 
 /**
- * A body model of the player's own: a Boots folder model, or an oral_body, oral_boots or oral_kit .model
- * their face folder's .xml lists (whatever its type: "parts", "uniform"…).
+ * A body model of the player's own: a Boots folder model, or an oral_body, oral_boots, oral_kit or parts_body
+ * .model their face folder lists (whatever its type: "parts", "uniform"…).
  */
 export const hasOwnBoots = (p) => !!p?.boots?.fmdls.length
   || (p?.fmdls || []).some((path) => /\.model$/i.test(path) && ORAL_BODY_MODELS.includes(stem(path)));

@@ -67,11 +67,43 @@ function modelPathFrom(dir, path) {
   return matches.find((p) => /win32/i.test(fileOf(p))) || matches[0] || target;
 }
 
+// Types a face.xml can give a model, matched against the start of its name by the 4cc AET compiler.
+const FACE_MODEL_TYPES = ['face_neck', 'handL', 'handR', 'gloveL', 'gloveR', 'uniform', 'shirt', 'pants_nocloth', 'eye', 'mouth'];
+
+/**
+ * The face.xml entries the 4cc AET compiler writes for a face folder without one: every .model in it (and its
+ * subfolders) but hair_high_win32.model, which the game loads anyway. The type comes from the start of the name
+ * without oral_ / _win32 (face_high_win32 is face_neck; "…model_type_X" is X; else parts); the .mtl is one in
+ * the model's folder, then the face folder, whose name starts or ends the model's (else materials.mtl, else any).
+ */
+function compilerFaceList(dir) {
+  const entries = [];
+  for (const path of index.filesUnder(dir).filter((p) => /\.model$/i.test(p))) {
+    const name = fileOf(path).toLowerCase();
+    if (name === 'hair_high_win32.model') continue;
+    const core = name === 'face_high_win32.model' ? 'face_neck'
+      : /^oral_.*_win32\.model$/.test(name) ? name.replace(/^oral_/, '').replace(/_win32\.model$/, '') : name.replace(/\.model$/, '');
+    const simple = core.replace(/_/g, '');
+    const type = FACE_MODEL_TYPES.find((t) => simple.startsWith(t.replace(/_/g, '').toLowerCase()))
+      || (core.includes('model_type_') ? core.split('model_type_')[1] : 'parts');
+    const mtlIn = (folder) => {
+      const mtls = index.filesIn(folder).filter((p) => /\.mtl$/i.test(p));
+      const stemOf = (p) => fileOf(p).toLowerCase().replace(/\.mtl$/, '');
+      return mtls.find((p) => core.startsWith(stemOf(p)) || core.endsWith(stemOf(p)))
+        || mtls.find((p) => stemOf(p) === 'materials') || mtls[0] || null;
+    };
+    entries.push({ path, mtl: mtlIn(dirOf(path)) || mtlIn(dir), type });
+  }
+  return entries;
+}
+
 /**
  * Read every open .xml for the .model files it lists (call after rebuildIndex). Returns problems found.
  *
- * Hair is the exception: a face folder's hair_*.model files are always loaded, unless the folder has a
- * hair.xml, which then decides like any other .xml. They use the folder's hair.mtl, else its face.mtl.
+ * A face folder without a face.xml gets the one the 4cc AET compiler would write for it (compilerFaceList), as
+ * exports leave it to the compiler. Hair is the other exception: a face folder's hair_*.model files are always
+ * loaded, unless the folder has a hair.xml, which then decides like any other .xml. They use the folder's
+ * hair.mtl, else its face.mtl.
  */
 export async function readModelLists() {
   const lists = new Map(), problems = [];
@@ -88,6 +120,11 @@ export async function readModelLists() {
   }
   for (const dir of faceFolders()) {
     const inDir = (name) => index.real(`${dir ? `${dir}/` : ''}${name}`);
+    if (!inDir('face.xml')) {
+      for (const entry of compilerFaceList(dir)) {
+        if (!lists.has(entry.path.toLowerCase())) lists.set(entry.path.toLowerCase(), { ...entry, xml: null });
+      }
+    }
     if (inDir('hair.xml')) continue;
     const mtl = inDir('hair.mtl') || inDir('face.mtl');
     for (const path of index.filesIn(dir).filter((p) => /^hair_.*\.model$/i.test(fileOf(p)))) {
