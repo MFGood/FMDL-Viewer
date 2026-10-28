@@ -1,6 +1,7 @@
 // textures.js — decoding texture files and turning them into GPU textures.
 // Each file is decoded once; GPU textures are made per color space on demand
-// (_SRGB roles are color, _LIN roles are linear data, timing textures are read unfiltered).
+// (_SRGB roles are color, _LIN roles are linear data, timing textures are read unfiltered), and per use for
+// normal, specular and roughness maps, rearranged into the channels three.js reads them from.
 
 import * as THREE from 'three';
 import { readFile } from '../core/files.js';
@@ -34,7 +35,7 @@ export function loadTexture(path) {
     try {
       const buffer = await readFile(path);
       const image = /\.(png|jpe?g)$/i.test(path) ? await decodeImage(buffer) : await decodeGameTexture(path, buffer);
-      const entry = { ...image, srgb: null, lin: null, timing: null };
+      const entry = { ...image, srgb: null, lin: null, timing: null, normal: null, specular: null, roughness: null };
       decoded.set(key, entry);
       return entry;
     } catch (e) {
@@ -68,11 +69,41 @@ function makeDataTexture(entry, { srgb, nearest }) {
   return texture;
 }
 
-/** GPU texture for a decoded file, in 'srgb' (color) or 'lin' (data) color space. null if not available. */
+/**
+ * A normal map as three.js reads it: the normal's x, y, z in RGB. PES normal maps are mostly DXT5nm, x in alpha
+ * and y in green (the other channels are filler); a texture with an opaque alpha already has x, y in red and
+ * green. z is worked out again from x and y either way.
+ */
+function normalPixels({ rgba }) {
+  let alphaUsed = false;
+  for (let i = 3; i < rgba.length; i += 4) if (rgba[i] < 250) { alphaUsed = true; break; }
+  const out = new Uint8Array(rgba.length);
+  for (let i = 0; i < rgba.length; i += 4) {
+    const x = (alphaUsed ? rgba[i + 3] : rgba[i]) / 127.5 - 1, y = rgba[i + 1] / 127.5 - 1;
+    const z = Math.sqrt(Math.max(0, 1 - x * x - y * y));
+    out[i] = (x + 1) * 127.5; out[i + 1] = (y + 1) * 127.5; out[i + 2] = (z + 1) * 127.5; out[i + 3] = 255;
+  }
+  return out;
+}
+
+/** A gray map's value (red) copied to where three.js reads it: alpha for specular, green for roughness. */
+function grayPixels({ rgba }, channel) {
+  const out = rgba.slice();
+  for (let i = 0; i < rgba.length; i += 4) out[i + channel] = rgba[i];
+  return out;
+}
+
+const REARRANGED = { normal: (e) => normalPixels(e), specular: (e) => grayPixels(e, 3), roughness: (e) => grayPixels(e, 1) };
+
+/**
+ * GPU texture for a decoded file: in 'srgb' (color) or 'lin' (data) color space, or rearranged as a 'normal',
+ * 'specular' or 'roughness' map. null if not available.
+ */
 export function gpuTexture(path, space) {
   const entry = path && decoded.get(path.toLowerCase());
   if (!entry || entry.error) return null;
-  entry[space] ||= makeDataTexture(entry, { srgb: space === 'srgb' });
+  const rearrange = REARRANGED[space];
+  entry[space] ||= makeDataTexture(rearrange ? { ...entry, rgba: rearrange(entry) } : entry, { srgb: space === 'srgb' });
   return entry[space];
 }
 
@@ -88,7 +119,7 @@ export function timingTexture(path) {
 export function forgetTextures(path) {
   const entries = path ? [[path.toLowerCase(), decoded.get(path.toLowerCase())]] : [...decoded];
   for (const [key, entry] of entries) {
-    entry?.srgb?.dispose(); entry?.lin?.dispose(); entry?.timing?.dispose();
+    for (const space of ['srgb', 'lin', 'timing', ...Object.keys(REARRANGED)]) entry?.[space]?.dispose();
     decoded.delete(key); loading.delete(key);
   }
 }

@@ -5,6 +5,7 @@ import { $ } from './dom.js';
 /** Current display options. The values here are the defaults; bindOptions() syncs them with the page. */
 export const options = {
   textures: true,
+  surfaceMaps: true,     // normal, specular and roughness maps
   defaultModels: true,   // default boots and hands for export players without their own boots
   wireframe: false,
   backFaces: false,
@@ -21,6 +22,7 @@ export const options = {
 
 const CHECKBOX_IDS = {
   textures: 'tTex',
+  surfaceMaps: 'tSurface',
   defaultModels: 'tDefaults',
   wireframe: 'tWire',
   backFaces: 'tBack',

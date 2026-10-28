@@ -32,6 +32,7 @@ makeGrid();
 
 bindOptions({
   textures: refreshMaterials,
+  surfaceMaps: refreshMaterials,
   backFaces: refreshMaterials,
   wireframe: applyWireframe,
   boundingBoxes: () => (boxLayer.visible = options.boundingBoxes),

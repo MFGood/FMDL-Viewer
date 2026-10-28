@@ -20,6 +20,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Settings:** the cog at the top right opens the global settings: display options, default models, a PES save file and navigation. They're remembered in the browser between visits.
 - **Save files:** load a PES 15–21 save under Save file in the settings, or drop it on the window (a file without an extension is tried as a save first); it's kept in the browser. An open export is matched to its team in the save, and its players then use their names, body shapes and skin colors from the save (edits are written back to the copy kept in the browser, and **Export** downloads it). The default body also shows and hides pieces the way the game does for FPC setups. A PES 15–17 save goes with Pre-Fox exports and a PES 18–21 save with Fox ones.
 - **Display options:**
+  - Normal, specular and roughness maps, when a material names them
   - Draw backfaces toggle
   - Bone overlay
   - Ground grid centered on the origin

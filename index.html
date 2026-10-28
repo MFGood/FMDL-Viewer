@@ -111,7 +111,7 @@
     <section>
       <h2>Materials</h2>
       <div id="mats"></div>
-      <p class="hint">Green dot: texture found. Amber: missing. Gray: not drawn by the viewer (normal and specular maps).</p>
+      <p class="hint">Green dot: texture found. Amber: missing. Gray: not drawn by the viewer.</p>
     </section>
   </aside>
   <div id="settings" role="dialog" aria-label="Settings" hidden>
@@ -123,6 +123,7 @@
       <h2>Display</h2>
       <div class="toggles">
         <label class="chk"><input type="checkbox" id="tTex" checked> Textures</label>
+        <label class="chk" title="The normal, specular and roughness maps a material names, on lit materials."><input type="checkbox" id="tSurface" checked> Normal and specular maps</label>
         <label class="chk"><input type="checkbox" id="tWire"> Wireframe</label>
         <label class="chk"><input type="checkbox" id="tBack"> Back faces</label>
         <label class="chk"><input type="checkbox" id="tBox"> Bounding boxes</label>

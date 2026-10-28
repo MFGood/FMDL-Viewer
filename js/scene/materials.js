@@ -45,10 +45,47 @@ function classifyPreFox({ shader, states, missing }) {
   return { forward, kind, anim: null, label };
 }
 
-// Texture roles the viewer draws with. Normal and specular maps aren't used. DiffuseMap is Pre-Fox's base texture.
+// Texture roles the viewer draws with. DiffuseMap is Pre-Fox's base texture. The normal, specular and roughness
+// maps (Fox and Pre-Fox names) are drawn on lit materials while "Normal and specular maps" is on.
 const USED_ROLES = ['Base_Tex_SRGB', 'Base_Tex_LIN', 'MetalnessMap_Tex_LIN', 'GlassReflection_Tex_SRGB', 'Timing_Tex_LIN', 'DiffuseMap'];
-export const isUsedRole = (role) => USED_ROLES.some((r) => r.toLowerCase() === role.toLowerCase()) || /^Base_Tex/i.test(role);
+const SURFACE_ROLES = {
+  normal: ['NormalMap_Tex_NRM', 'NormalMap'],
+  specular: ['SpecularMap_Tex_LIN', 'SpecularMap'],
+  roughness: ['RoughnessMap_Tex_LIN', 'RoughnessMap'],
+};
+const isRole = (list, role) => list.some((r) => r.toLowerCase() === role.toLowerCase());
+
+/** A normal, specular or roughness map that's the game's flat placeholder (dummy_nrm, dummy_srm…): nothing to draw. */
+export const isPlaceholder = (role, ref) => Object.values(SURFACE_ROLES).some((list) => isRole(list, role)) && /^dummy_/i.test(ref.filename);
+export const isUsedRole = (role) => isRole(USED_ROLES, role) || /^Base_Tex/i.test(role)
+  || (options.surfaceMaps && Object.values(SURFACE_ROLES).some((list) => isRole(list, role)));
 const roleRef = (mi, role) => mi.textures.find(([r]) => r.toLowerCase() === role.toLowerCase())?.[1] || null;
+
+/**
+ * A lit material's normal, specular and roughness maps (those its material names), as three.js material
+ * settings. PES normal maps are DirectX-style (green down), hence the flipped y. Specular goes to
+ * MeshPhysicalMaterial's specular intensity, so `physical` says whether that material is needed.
+ */
+function surfaceMaps(model, mi, mesh) {
+  if (!options.surfaceMaps || !options.textures) return { settings: {}, physical: false };
+  const map = (kind) => {
+    const found = mi.textures.find(([role, ref]) => isRole(SURFACE_ROLES[kind], role) && !isPlaceholder(role, ref));
+    const path = found && texturePath(model, found[1], mesh);
+    return path ? gpuTexture(path, kind) : null;
+  };
+  const normal = map('normal'), specular = map('specular'), roughness = map('roughness');
+  const settings = {};
+  if (normal) Object.assign(settings, { normalMap: normal, normalScale: new THREE.Vector2(1, -1) });
+  if (specular) Object.assign(settings, { specularIntensityMap: specular, specularIntensity: 1 });
+  if (roughness) Object.assign(settings, { roughnessMap: roughness, roughness: 1 });
+  return { settings, physical: !!specular };
+}
+
+/** A lit material: MeshStandardMaterial, or MeshPhysicalMaterial when it has a specular map. */
+function litMaterial(params, model, mi, mesh) {
+  const { settings, physical } = surfaceMaps(model, mi, mesh);
+  return physical ? new THREE.MeshPhysicalMaterial({ ...params, ...settings }) : new THREE.MeshStandardMaterial({ ...params, ...settings });
+}
 const baseRole = (mi) => mi.textures.find(([r]) => /^(Base_Tex|DiffuseMap$)/i.test(r)) || null;
 
 function textureFor(model, role, ref, mesh) {
@@ -64,7 +101,7 @@ export function texturesNeeded(meshObjects) {
   if (!options.textures) return paths;
   for (const { mesh, model } of meshObjects) {
     for (const [role, ref] of mesh.materialInstance.textures) {
-      if (!isUsedRole(role)) continue;
+      if (!isUsedRole(role) || isPlaceholder(role, ref)) continue;
       const path = texturePath(model, ref, mesh);
       if (path) paths.add(path);
     }
@@ -178,7 +215,8 @@ export function makeMaterial(mesh, model) {
 }
 
 /** A Pre-Fox material, following its .mtl states. */
-function preFoxMaterial(mi, map, cls) {
+function preFoxMaterial(mesh, model, map, cls) {
+  const mi = mesh.materialInstance;
   const { states } = mi.prefox;
   const common = {
     color: map ? 0xffffff : 0xb9c4bd,
@@ -192,12 +230,12 @@ function preFoxMaterial(mi, map, cls) {
     alphaTest: !map ? 0 : states.alphatest >= 1 ? Math.min(1, ((states.alpharef ?? 0) + 1) / 255) : cls.forward ? 0.01 : 0,
   };
   if (cls.kind === 'constant') return new THREE.MeshBasicMaterial(common);
-  return new THREE.MeshStandardMaterial({ ...common, roughness: 0.75, metalness: 0, envMapIntensity: 0.35 });
+  return litMaterial({ ...common, roughness: 0.75, metalness: 0, envMapIntensity: 0.35 }, model, mi, mesh);
 }
 
 function materialFor(mesh, model, map, cls) {
   const mi = mesh.materialInstance;
-  if (mi.prefox) return preFoxMaterial(mi, map, cls);
+  if (mi.prefox) return preFoxMaterial(mesh, model, map, cls);
   const twoSided = !!(mesh.alphaFlags & 0x20);
   const common = {
     color: map ? 0xffffff : 0xb9c4bd,
@@ -234,10 +272,10 @@ function materialFor(mesh, model, map, cls) {
 
   if (cls.kind === 'ggx') {
     const metalnessMap = textureFor(model, 'MetalnessMap_Tex_LIN', roleRef(mi, 'MetalnessMap_Tex_LIN'));
-    return new THREE.MeshStandardMaterial({ ...common, roughness: 0.4, metalness: 1, metalnessMap, envMapIntensity: 1 });
+    return litMaterial({ ...common, roughness: 0.4, metalness: 1, metalnessMap, envMapIntensity: 1 }, model, mi, mesh);
   }
 
-  const material = new THREE.MeshStandardMaterial({ ...common, roughness: 0.75, metalness: 0, envMapIntensity: 0.35 });
+  const material = litMaterial({ ...common, roughness: 0.75, metalness: 0, envMapIntensity: 0.35 }, model, mi, mesh);
   if (cls.kind === 'fresnel') addFresnelRim(material, mi);
   return material;
 }

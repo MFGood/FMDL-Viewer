@@ -8,7 +8,7 @@ import {
   viewedPlayer, defaultParts, defaultsOn, hasOwnBoots, settingsOf, setSetting, usesSkin, defaultHandsLabel,
 } from '../export/players.js';
 import { kitsAvailable, texturePath, skinFor, customSkinAvailable, CUSTOM_SKIN } from '../export/texture-lookup.js';
-import { classify, isUsedRole } from '../scene/materials.js';
+import { classify, isUsedRole, isPlaceholder } from '../scene/materials.js';
 import { textureState } from '../scene/textures.js';
 import { offWeightCount } from '../scene/geometry.js';
 import { strayCount } from '../scene/framing.js';
@@ -223,7 +223,7 @@ function textureLine(model, role, ref) {
   const path = texturePath(model, ref);
   const decoded = path && textureState(path);
   const found = !!path && !decoded?.error;
-  const drawn = isUsedRole(role);
+  const drawn = isUsedRole(role) && !isPlaceholder(role, ref);
   const title = [
     `${ref.directory}${ref.filename}`,
     path ? `found: ${path}` : 'not found',
