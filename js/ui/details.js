@@ -148,7 +148,7 @@ export function renderTree() {
       return item;
     };
     const item = el('li');
-    const { label } = checkbox(model.label, model.visible, (on) => { model.visible = on; model.hidden.model = !on; applyVisibility(); });
+    const { label } = checkbox(model.kit ? `${model.label} (${kitLabel(model.kit)} only)` : model.label, model.visible, (on) => { model.visible = on; model.hidden.model = !on; applyVisibility(); });
     label.title = model.path;
     item.append(label);
     const roots = model.parsed.meshGroups.filter((g) => !g.parent);

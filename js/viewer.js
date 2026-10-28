@@ -2,7 +2,7 @@
 // textures, kits or options change, and which meshes are shown.
 
 import * as THREE from 'three';
-import { readFile, readGameText, isGone, listedModels } from './core/files.js';
+import { readFile, readGameText, isGone, listedModels, kitOfModel } from './core/files.js';
 import { setStatus, showError, hideError } from './core/notices.js';
 import { options } from './core/options.js';
 import { state } from './core/state.js';
@@ -94,6 +94,7 @@ function addModel({ path, parsed }, player) {
   const model = {
     label: isDefaultModel(path) ? `${fileOf(path)} (default)` : fileOf(path),
     path, ownDir: dirOf(path), player, parsed, group: new THREE.Group(), visible: !hidden.model, hidden,
+    kit: kitOfModel(path), // a kit-numbered model is only shown with its kit
   };
   for (const mesh of parsed.meshes) {
     const obj = new THREE.Mesh(buildGeometry(mesh), new THREE.MeshStandardMaterial({ color: 0xb9c4bd }));
@@ -201,7 +202,8 @@ export function applyVisibility() {
   for (const m of state.meshObjects) {
     m.hiddenInGame = hiddenInGame(m.mesh, lookOf(m.model));
     m.gameHides = m.hiddenInGame && !m.model.hidden.unhid.has(m.mesh.index);
-    m.shown = m.model.visible && m.groupVisible && !m.gameHides && (options.hiddenMeshes || !m.obj.userData.hiddenByFile);
+    m.shown = m.model.visible && m.groupVisible && !m.gameHides && (!m.model.kit || m.model.kit === state.currentKit)
+      && (options.hiddenMeshes || !m.obj.userData.hiddenByFile);
     m.obj.visible = m.shown && !(animating && m.skinned);
     if (m.skinned) m.skinned.visible = m.shown && animating;
   }

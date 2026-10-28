@@ -7,7 +7,7 @@
 import { $ } from '../core/dom.js';
 import {
   LOOSE, index, addSource, removeSources, clearSources, rebuildIndex, allPaths, readText, isGone, fetchAsset,
-  readModelLists, isModelPath,
+  readModelLists, isModelPath, modelsListedFor,
 } from '../core/files.js';
 import { setStatus, flashStatus, showError, hideError, forgetDismissedErrors } from '../core/notices.js';
 import { state } from '../core/state.js';
@@ -66,7 +66,7 @@ async function openExport(label) {
   rebuildIndex();
   setStatus('Reading export…');
   const listProblems = await readModelLists();
-  state.aet = await scanExport(index, readText, isModelPath);
+  state.aet = await scanExport(index, readText, isModelPath, modelsListedFor);
   if (state.aet) state.aet.kitConfigs = await readKitConfigs(state.aet);
   linkSaveTeam();
   if (!state.aet) {

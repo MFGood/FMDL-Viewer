@@ -42,9 +42,10 @@ export const readGameText = async (path) => new TextDecoder('utf-8').decode(awai
 // ---------------------------------------------------------------- Pre-Fox model lists
 
 /**
- * Pre-Fox .model files listed in the open .xml files: lowercase path -> { path, mtl, type, xml }, where mtl
- * is the .mtl the .xml assigns (null if none) and type the .xml's type for it. Only listed .model files that
- * exist are kept, and only they are loaded, as in the game (plus face-folder hair; see readModelLists).
+ * Pre-Fox .model files listed in the open .xml files: lowercase path -> { path, mtl, type, xml, kit }, where
+ * mtl is the .mtl the .xml assigns (null if none), type the .xml's type for it and kit the kit a kit-numbered
+ * model is for (null for any). Only listed .model files that exist are kept, and only they are loaded, as in
+ * the game (plus what the compiler and game add; see readModelLists).
  * Rebuilt by readModelLists().
  */
 export let listedModels = new Map();
@@ -67,35 +68,119 @@ function modelPathFrom(dir, path) {
   return matches.find((p) => /win32/i.test(fileOf(p))) || matches[0] || target;
 }
 
+// ---------------------------------------------------------------- the 4cc AET compiler's rules
+
+// Kit-numbered names: u0XXXp1 … p9 (XXX the team ID). The compiler writes them into a face.xml as p0, which the
+// game fills in with the kit being worn, so only the current kit's file of a set is shown (see kitOfModel).
+const KIT_NUMBERED = /(u0[a-z0-9]{3}p)([0-9])/i;
+
+/** The kit ("p1"…) a kit-numbered name is for, or null. */
+const kitOfName = (name) => { const m = KIT_NUMBERED.exec(name); return m && m[2] !== '0' ? `p${m[2]}` : null; };
+
+/** A kit-numbered path with its kit number swapped for this kit's ("p2"), if that file is open; else the path. */
+function forKit(path, kit) {
+  if (!path || !kit || !KIT_NUMBERED.test(fileOf(path))) return path;
+  return index.real(`${dirOf(path)}/${fileOf(path).replace(KIT_NUMBERED, `$1${kit.slice(1)}`)}`) || path;
+}
+
+/** The open files of a p0 path's set, one per kit: [{ path, kit }] (none if the path isn't a p0 one). */
+function kitFilesOf(path) {
+  const m = KIT_NUMBERED.exec(fileOf(path));
+  if (!m || m[2] !== '0') return [];
+  const pattern = new RegExp(`^${fileOf(path).replace(/[.+^${}()|[\]\\*?]/g, '\\$&').replace(KIT_NUMBERED, `$1[1-9]`)}$`, 'i');
+  return index.filesIn(dirOf(path)).filter((p) => pattern.test(fileOf(p))).map((p) => ({ path: p, kit: kitOfName(fileOf(p)) }));
+}
+
+// .common links: "name.model.common" (or ".common.txt") in a face folder stands for name.model in the export's
+// Common folder, in the subfolder of the same name as the link's; the same for .mtl files.
+const COMMON_LINK = /\.common(\.txt)?$/i;
+
+/** The export's Common folder for a folder inside it, or null. */
+function commonFolderOf(dir) {
+  for (let d = dirOf(dir); ; d = dirOf(d)) {
+    const common = index.subdir(d, 'Common');
+    if (common) return common;
+    if (!d) return null;
+  }
+}
+
+/**
+ * The file a .common link in face folder `faceDir` stands for, or null when Common hasn't it. The compiler adds
+ * oral_ and _win32 to a Common .model's name, so that name is tried too.
+ */
+function commonTarget(link, faceDir) {
+  const common = commonFolderOf(faceDir);
+  if (!common) return null;
+  const name = fileOf(link).replace(COMMON_LINK, ''), sub = dirOf(link).slice(faceDir.length).replace(/^\//, '');
+  const dir = sub ? `${common}/${sub}` : common;
+  return index.real(`${dir}/${name}`) || (/\.model$/i.test(name) && index.real(`${dir}/oral_${name.replace(/\.model$/i, '_win32.model')}`)) || null;
+}
+
+/** A face.xml path into the game's uniform common folder, as the open export's Common file; else null. */
+function commonPathFrom(dir, path) {
+  const m = /(?:^|\/)model\/character\/uniform\/common\/[^/]+\/(.+)$/i.exec(normPath(path));
+  const common = m && commonFolderOf(dir);
+  if (!common) return null;
+  const name = fileOf(m[1]), sub = dirOf(m[1]);
+  const inCommon = (file) => index.real(`${common}/${sub ? `${sub}/` : ''}${file}`);
+  return inCommon(name) || inCommon(name.replace(/^oral_(.*)_win32(\.model)$/i, '$1$2'));
+}
+
 // Types a face.xml can give a model, matched against the start of its name by the 4cc AET compiler.
 const FACE_MODEL_TYPES = ['face_neck', 'handL', 'handR', 'gloveL', 'gloveR', 'uniform', 'shirt', 'pants_nocloth', 'eye', 'mouth'];
 
 /**
  * The face.xml entries the 4cc AET compiler writes for a face folder without one: every .model in it (and its
- * subfolders) but hair_high_win32.model, which the game loads anyway. The type comes from the start of the name
- * without oral_ / _win32 (face_high_win32 is face_neck; "…model_type_X" is X; else parts); the .mtl is one in
- * the model's folder, then the face folder, whose name starts or ends the model's (else materials.mtl, else any).
+ * subfolders, and the Common ones its .common links stand for) but hair_high_win32.model, which the game loads
+ * anyway. The type comes from the start of the name without oral_ / _win32 (face_high_win32 is face_neck;
+ * "…model_type_X" is X; else parts). The .mtl is one whose name starts or ends the model's, else materials.mtl,
+ * else any, looked for in the model's folder, then the face folder; for a Common model, one in the link's folder
+ * whose name matches comes first, then Common's folder. An .mtl can be a .common link too. A kit-numbered model
+ * is for one kit (kit), and so is its .mtl.
  */
 function compilerFaceList(dir) {
   const entries = [];
-  for (const path of index.filesUnder(dir).filter((p) => /\.model$/i.test(p))) {
-    const name = fileOf(path).toLowerCase();
+  const models = index.filesUnder(dir).filter((p) => /\.model(\.common(\.txt)?)?$/i.test(p));
+  for (const file of models) {
+    const link = COMMON_LINK.test(file);
+    const path = link ? commonTarget(file, dir) : file;
+    if (!path) continue;
+    const name = fileOf(link ? file.replace(COMMON_LINK, '') : file).toLowerCase();
     if (name === 'hair_high_win32.model') continue;
     const core = name === 'face_high_win32.model' ? 'face_neck'
       : /^oral_.*_win32\.model$/.test(name) ? name.replace(/^oral_/, '').replace(/_win32\.model$/, '') : name.replace(/\.model$/, '');
     const simple = core.replace(/_/g, '');
     const type = FACE_MODEL_TYPES.find((t) => simple.startsWith(t.replace(/_/g, '').toLowerCase()))
       || (core.includes('model_type_') ? core.split('model_type_')[1] : 'parts');
+    // .mtl files of a folder, links followed: [{ path, stem }].
+    const mtlsIn = (folder) => index.filesIn(folder).filter((p) => /\.mtl(\.common(\.txt)?)?$/i.test(p))
+      .map((p) => ({ path: COMMON_LINK.test(p) ? commonTarget(p, dir) : p, stem: fileOf(p).replace(COMMON_LINK, '').toLowerCase().replace(/\.mtl$/, '') }))
+      .filter((m) => m.path);
+    const matching = (folder) => mtlsIn(folder).find((m) => core.startsWith(m.stem) || core.endsWith(m.stem))?.path || null;
     const mtlIn = (folder) => {
-      const mtls = index.filesIn(folder).filter((p) => /\.mtl$/i.test(p));
-      const stemOf = (p) => fileOf(p).toLowerCase().replace(/\.mtl$/, '');
-      return mtls.find((p) => core.startsWith(stemOf(p)) || core.endsWith(stemOf(p)))
-        || mtls.find((p) => stemOf(p) === 'materials') || mtls[0] || null;
+      const mtls = mtlsIn(folder);
+      return matching(folder) || mtls.find((m) => m.stem === 'materials')?.path || mtls[0]?.path || null;
     };
-    entries.push({ path, mtl: mtlIn(dirOf(path)) || mtlIn(dir), type });
+    const mtl = link
+      ? matching(dirOf(file)) || mtlIn(dirOf(path)) || mtlIn(dirOf(file)) || mtlIn(dir)
+      : mtlIn(dirOf(path)) || mtlIn(dir);
+    const kit = kitOfName(fileOf(path));
+    entries.push({ path, mtl: forKit(mtl, kit), type, kit });
   }
   return entries;
 }
+
+/**
+ * Listed .model files outside the folder whose list has them (Common models, through a .common link or a
+ * face.xml path into the game's common folder), so they count as that folder's.
+ */
+export function modelsListedFor(dir) {
+  const key = dir.toLowerCase();
+  return [...listedModels.values()].filter((e) => e.owner?.toLowerCase() === key && !e.path.toLowerCase().startsWith(`${key}/`)).map((e) => e.path);
+}
+
+/** The kit a listed kit-numbered .model is for ("p1"…), or null for a model shown with any kit. */
+export const kitOfModel = (path) => listedModels.get(normPath(path).toLowerCase())?.kit ?? null;
 
 /**
  * Read every open .xml for the .model files it lists (call after rebuildIndex). Returns problems found.
@@ -115,16 +200,22 @@ export async function readModelLists() {
     catch (e) { if (!isGone(e)) problems.push(`Couldn't read ${fileOf(xml)}: ${e.message}`); continue; }
     const dir = dirOf(xml);
     for (const entry of entries) {
-      const path = modelPathFrom(dir, entry.model);
-      if (!index.has(path) || lists.has(path.toLowerCase())) continue;
-      lists.set(path.toLowerCase(), { path, mtl: entry.mtl ? openPathFrom(dir, entry.mtl) : null, type: entry.type, xml });
+      // A path into the game's uniform common folder is the export's Common file; a kit-numbered p0 one stands
+      // for each kit's file.
+      const path = commonPathFrom(dir, entry.model) || modelPathFrom(dir, entry.model);
+      const mtl = entry.mtl ? commonPathFrom(dir, entry.mtl) || openPathFrom(dir, entry.mtl) : null;
+      const files = index.has(path) ? [{ path, kit: null }] : kitFilesOf(path);
+      for (const file of files) {
+        if (lists.has(file.path.toLowerCase())) continue;
+        lists.set(file.path.toLowerCase(), { path: file.path, mtl: forKit(mtl, file.kit), type: entry.type, xml, kit: file.kit, owner: dir });
+      }
     }
   }
   for (const dir of faceFolders()) {
     const inDir = (name) => index.real(`${dir ? `${dir}/` : ''}${name}`);
     if (!inDir('face.xml')) {
       for (const entry of compilerFaceList(dir)) {
-        if (!lists.has(entry.path.toLowerCase())) lists.set(entry.path.toLowerCase(), { ...entry, xml: null });
+        if (!lists.has(entry.path.toLowerCase())) lists.set(entry.path.toLowerCase(), { ...entry, xml: null, owner: dir });
       }
     }
     if (inDir('hair.xml')) continue;

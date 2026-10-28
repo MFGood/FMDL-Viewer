@@ -98,11 +98,11 @@ export function gearSlot(id) {
 
 /**
  * Read an export's structure. `readText(path)` returns a file's text (async); `isModel(path)` says which
- * files are models to show (.fmdl, and Pre-Fox .model files their .xml lists). The players' `fmdls`
- * lists hold both kinds.
- * Returns { root, teamName, teamId, notePath, logoPath, kitDir, commonDir, players, collars }.
+ * files are models to show (.fmdl, and Pre-Fox .model files their .xml lists); `listedFor(dir)` gives the
+ * models a folder's list has elsewhere (Common ones). The players' `fmdls` lists hold both kinds.
+ * Returns { root, teamName, teamId, notePath, logoPath, kitConfigDir, kitDir, commonDir, players, collars }.
  */
-export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.test(p)) {
+export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.test(p), listedFor = () => []) {
   const root = findRoot(index);
   if (root === null) return null;
   const folder = (name) => index.subdir(root, name);
@@ -136,7 +136,8 @@ export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.te
     if (m && +m[1] >= 1 && +m[1] <= 23) portraitsByNumber.set(+m[1], p);
   }
 
-  const fmdlsUnder = (dir, kind) => gameModels(index.filesUnder(dir).filter(isModel), kind);
+  // A folder's models, and those its list has elsewhere (Common models through .common links).
+  const fmdlsUnder = (dir, kind) => gameModels([...new Set([...index.filesUnder(dir).filter(isModel), ...listedFor(dir)])], kind);
   const players = [];
 
   // Faces: "XXXnn - Player Name".
