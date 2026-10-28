@@ -78,10 +78,7 @@ export function dressEditHair(parsed, hair, dir) {
   for (const mi of parsed.materialInstances) {
     if (mi.name.toLowerCase() === 'head_phong') {
       mi.textures.unshift(['DiffuseMap', { filename: 'head_color_w.dds', directory: './', baseDir: `${dir}/face`, srgb: true }]);
-      if (hair.shell) {
-        mi.textures.push(['LayerMap', image('shell', hair.shell)]);
-        mi.layerTint = hair.color;
-      }
+      if (hair.shell) mi.textures.push(['LayerMap', { ...image('shell', hair.shell), tint: hair.color }]);
     } else if (hair.parts) {
       mi.textures.unshift(['DiffuseMap', image('parts', hair.parts)]);
       mi.tint = hair.color;

@@ -10,6 +10,7 @@ import { inGameLook } from './in-game.js';
 import { FACE_PARTS } from '../animation/face-shape.js';
 import { HAIR_DIR, DEFAULT_HAIR, editHair, hairModel } from './edit-hair.js';
 import { HAIR_STYLES, HAIR_PARTS, HAIR_SHELLS } from './edit-hair-styles.js';
+import { DEFAULT_LOOK, allLayerFiles } from './face-layers.js';
 
 // ---------------------------------------------------------------- default boots and hands
 
@@ -27,8 +28,8 @@ export const DEFAULT_VERSIONS = { 17: 'PES 17', 21: 'PES 21' };
  * with kit, shoes and skin meshes) and hands (glove_l / glove_r.<version>.fmdl), with skin, thigh and arm
  * textures in skin colors 1–6; and PES 16's editable face with the game's eyes, mouth (teeth, gums and tongue),
  * neck and back of the head (face/*Hi.model with their .mtl files), head_color textures in the six skin colors,
- * eyelashes, eye shadow, eye and mouth textures, and their normal and specular maps; and its edit hair
- * (edithair/, see edit-hair.js).
+ * eyelashes, eye shadow, eye and mouth textures, and their normal and specular maps, and the layers painted on
+ * its skin (face/montage/, see face-layers.js); and its edit hair (edithair/, see edit-hair.js).
  */
 export const DEFAULT_FILES = [
   ...Object.keys(DEFAULT_VERSIONS).flatMap((v) => [`boots.${v}.fmdl`, `glove_l.${v}.fmdl`, `glove_r.${v}.fmdl`]),
@@ -41,6 +42,7 @@ export const DEFAULT_FILES = [
   ...HAIR_STYLES.flatMap((style) => [hairModel(style), `${HAIR_DIR}/model/${style}/hair.mtl`]),
   ...HAIR_PARTS.map((name) => `${HAIR_DIR}/parts/${name}.avif`),
   ...HAIR_SHELLS.map((name) => `${HAIR_DIR}/shell/${name}.avif`),
+  ...allLayerFiles(),
 ];
 
 /** The default .model files' list entries for readModelLists: the editable face's parts with their .mtl files. */
@@ -130,13 +132,24 @@ export const hasOwnFace = (p) => listedTypes(p).some((t) => FACE_TYPES.includes(
 /** Whether a player's face folder lists a model of this .xml type ("eye", "mouth"). */
 const hasOwnType = (p, type) => listedTypes(p).some((t) => t.type === type.toLowerCase());
 
+/** Whether a player's face folder has hair of its own (which the game shows instead of the edit hair). */
+export const hasOwnHair = (p) => hasOwnType(p, 'hair');
+
+/** The hair and face texture settings (edit-hair.js, face-layers.js), with their values without a save. */
+export const LOOK_DEFAULTS = { ...DEFAULT_HAIR, ...DEFAULT_LOOK };
+
 /**
- * The edit hair a player's save settings name (the game's default hair without a save), or null. See editHair.
+ * A player's hair and face texture settings: theirs in the save when linked to it, else the ones set for them
+ * in the browser over the game's defaults.
  */
-export function hairFor(p) {
+export function lookOf(p) {
   const own = savePlayerOf(p);
-  return editHair(own ? Object.fromEntries(Object.keys(DEFAULT_HAIR).map((k) => [k, own[k] ?? DEFAULT_HAIR[k]])) : DEFAULT_HAIR);
+  if (own) return Object.fromEntries(Object.keys(LOOK_DEFAULTS).map((k) => [k, own[k] ?? LOOK_DEFAULTS[k]]));
+  return { ...LOOK_DEFAULTS, ...(p ? settingsOf(p).look : null) };
 }
+
+/** The edit hair a player's settings name, or null. See editHair. */
+export const hairFor = (p) => editHair(lookOf(p));
 
 /**
  * Which default models a player would get: { boots, left, right, hands, face, hair } (hands: either hand). Defaults

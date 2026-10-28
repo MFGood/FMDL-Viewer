@@ -45,8 +45,8 @@ function classifyPreFox({ shader, states, missing }) {
   return { forward, kind, anim: null, label };
 }
 
-// Texture roles the viewer draws with. DiffuseMap is Pre-Fox's base texture; LayerMap is the viewer's own, a texture
-// layered over it by its alpha (edit hair's shell on the skin). The normal, specular and roughness
+// Texture roles the viewer draws with. DiffuseMap is Pre-Fox's base texture; LayerMap is the viewer's own, textures
+// layered over it by their alpha (edit hair's shell on the skin, the editable face's eyebrows and beard…). The normal, specular and roughness
 // maps (Fox and Pre-Fox names) are drawn on lit materials while "Normal and specular maps" is on.
 const USED_ROLES = ['Base_Tex_SRGB', 'Base_Tex_LIN', 'MetalnessMap_Tex_LIN', 'GlassReflection_Tex_SRGB', 'Timing_Tex_LIN', 'DiffuseMap', 'LayerMap'];
 const SURFACE_ROLES = {
@@ -233,8 +233,9 @@ function preFoxMaterial(mesh, model, map, cls) {
   const material = cls.kind === 'constant' ? new THREE.MeshBasicMaterial(common)
     : litMaterial({ ...common, roughness: 0.75, metalness: 0, envMapIntensity: 0.35 }, model, mi, mesh);
   if (map && mi.tint) addOverlayTint(material, mi.tint);
-  const layerRef = map && roleRef(mi, 'LayerMap'), layer = layerRef && textureFor(model, 'LayerMap', layerRef, mesh);
-  if (layer) addLayer(material, layer, mi.layerTint);
+  const layers = !map ? [] : mi.textures.filter(([role]) => role === 'LayerMap')
+    .map(([role, ref]) => ({ map: textureFor(model, role, ref, mesh), tint: ref.tint, alpha: ref.alpha ?? 1, uv: ref.uv })).filter((l) => l.map);
+  if (layers.length) addLayers(material, layers);
   return material;
 }
 
@@ -262,23 +263,30 @@ function addOverlayTint(material, tint) {
 }
 
 /**
- * Layer a texture over the base texture by its alpha (edit hair's shell on the skin), on the base texture's UVs,
- * tinted by overlay when there's a tint.
+ * Layer textures over the base texture, bottom first, each by its alpha times `alpha` (edit hair's shell on the
+ * skin, the editable face's eyebrows and beard…); a layer with a tint is gray, colored by overlay. A layer is on
+ * the base texture's UVs, or with uv: [scale, x, y] on (base UV − (x, y)) / scale. layers: [{ map, tint ([r, g, b]
+ * sRGB 0–1, or null), alpha, uv }].
  */
-function addLayer(material, layer, tint) {
+function addLayers(material, layers) {
   material.onBeforeCompile = (shader) => {
-    Object.assign(shader.uniforms, {
-      layerMap: { value: layer }, layerTint: { value: linearTint(tint || [0.5, 0.5, 0.5]) }, layerTinted: { value: tint ? 1 : 0 },
-    });
-    shader.fragmentShader = `uniform sampler2D layerMap;\nuniform vec3 layerTint;\nuniform float layerTinted;\n${OVERLAY_GLSL}\n${shader.fragmentShader}`
-      .replace('#include <map_fragment>', `#include <map_fragment>
-  {
-    vec4 layer = texture2D(layerMap, vMapUv);
-    vec3 color = layerTinted > 0.5 ? overlayTint(layer.rgb, layerTint) : layer.rgb;
-    diffuseColor.rgb = mix(diffuseColor.rgb, color, layer.a);
+    const declare = [], blend = [];
+    layers.forEach(({ map, tint, alpha, uv }, i) => {
+      // Clamped: past its edges a layer would otherwise repeat (the textures wrap); its border is clear.
+      const at = uv ? `clamp((vMapUv - vec2(${uv[1].toFixed(6)}, ${uv[2].toFixed(6)})) / ${uv[0].toFixed(6)}, 0.0, 1.0)` : 'vMapUv';
+      shader.uniforms[`layerMap${i}`] = { value: map };
+      shader.uniforms[`layerTint${i}`] = { value: linearTint(tint || [0.5, 0.5, 0.5]) };
+      declare.push(`uniform sampler2D layerMap${i};\nuniform vec3 layerTint${i};`);
+      blend.push(`  {
+    vec4 layer = texture2D(layerMap${i}, ${at});
+    vec3 color = ${tint ? `overlayTint(layer.rgb, layerTint${i})` : 'layer.rgb'};
+    diffuseColor.rgb = mix(diffuseColor.rgb, color, min(1.0, layer.a * ${alpha.toFixed(4)}));
   }`);
+    });
+    shader.fragmentShader = `${declare.join('\n')}\n${OVERLAY_GLSL}\n${shader.fragmentShader}`
+      .replace('#include <map_fragment>', `#include <map_fragment>\n${blend.join('\n')}`);
   };
-  material.customProgramCacheKey = () => 'layer';
+  material.customProgramCacheKey = () => `layers-${layers.map((l) => `${l.tint ? 't' : 'p'}${l.alpha.toFixed(4)}${l.uv ? `u${l.uv.join(',')}` : ''}`).join('-')}`;
 }
 
 function materialFor(mesh, model, map, cls) {

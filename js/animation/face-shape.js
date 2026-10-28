@@ -18,7 +18,10 @@
 
 import { fetchAsset } from '../core/files.js';
 
-/** The sliders, by group: save field, label, and the appearance field ID in PES 2016's table. */
+/**
+ * The sliders, by group: save field, label, and the key of their tables in face-shape.json (one more than the
+ * game's own number for the field in PES 2016's appearance table).
+ */
 export const FACE_GROUPS = [
   ['Face', [
     ['face_size', 'Face size', 93],

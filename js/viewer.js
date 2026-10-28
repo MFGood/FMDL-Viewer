@@ -11,9 +11,10 @@ import { parseFmdl } from './formats/fmdl.js';
 import { parseModel } from './formats/model.js';
 import { parseMtl, attachMaterials } from './formats/mtl.js';
 import { dirOf, fileOf } from './formats/aet.js';
-import { isDefaultModel, viewedPlayer, setSetting, hiddenParts, hairFor, DEFAULTS } from './export/players.js';
+import { isDefaultModel, viewedPlayer, setSetting, hiddenParts, hairFor, lookOf, DEFAULTS } from './export/players.js';
 import { hairStyleOf, dressEditHair } from './export/edit-hair.js';
-import { pickCurrentKit, kitsAvailable } from './export/texture-lookup.js';
+import { faceLayers, dressFaceLayers } from './export/face-layers.js';
+import { pickCurrentKit, kitsAvailable, skinFor } from './export/texture-lookup.js';
 import { savePlayerOf, skinToSave } from './export/save-team.js';
 import { inGameLook, hiddenInGame } from './export/in-game.js';
 import { keepSaveEdits } from './core/save.js';
@@ -181,10 +182,18 @@ export async function applyFaceShape() {
 // A newer refresh supersedes an older one still waiting for textures.
 let refreshCount = 0;
 
+/** Paint the editable face's skin layers (eyebrows, beard…) for its player's settings and skin color. */
+function dressFace() {
+  for (const model of state.models) {
+    if (model.facePart === 'face') dressFaceLayers(model.parsed, faceLayers(lookOf(model.player), skinFor(model.player)), DEFAULTS);
+  }
+}
+
 /** Rebuild every material once the textures it needs are decoded. */
 export async function refreshMaterials() {
   const refresh = ++refreshCount;
   pickCurrentKit();
+  dressFace();
   applyVisibility(); // linked to the save, the kit's config and the skin color decide what of the default body shows
   renderKits();
   renderSkins();

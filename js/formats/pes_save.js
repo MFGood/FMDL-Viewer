@@ -304,6 +304,12 @@ const APPEARANCE = [
     ['chin_wid', 0x2B, 4, 4],
     ['chin_hi', 0x2C, 0, 4], ['chin_dep', 0x2C, 4, 4],
     ['skin_col', 0x2D, 0, 3],
+    // Face textures (PES 16; face-layers.js): forehead and eyelid shading types, eyebrow and beard with their colors
+    ['forehead', 0x2E, 0, 3], ['beard', 0x2E, 3, 5], ['lid_u_type', 0x2F, 3, 5], ['lid_l_type', 0x30, 0, 4],
+    ['brow_shape', 0x32, 0, 5],
+    ['brow_col_r', 0x39, 0, 6], ['brow_thick', 0x39, 6, 2], ['brow_col_g', 0x3A, 0, 6], ['brow_alpha', 0x3A, 6, 2],
+    ['brow_col_b', 0x3B, 0, 6], ['brow_var', 0x3B, 6, 2],
+    ['beard_col_r', 0x3D, 4, 6], ['beard_col_g', 0x3E, 2, 6], ['beard_col_b', 0x3F, 0, 6], ['beard_alpha', 0x3F, 6, 2],
     // Edit hair (PES 16; edit-hair.js turns them into the game's hair model and textures)
     ['hair_col_r', 0x35, 6, 6], ['hair_col_g', 0x36, 4, 6], ['hair_col_b', 0x37, 2, 6],
     ['hair_type', 0x38, 0, 4], ['hair_pt', 0x38, 4, 4],

@@ -81,6 +81,7 @@ js/
     in-game.js             what the game shows of the default body for a player linked to the save (kit configs, FPC rules)
     texture-lookup.js      which file a texture reference resolves to; kit choice
     edit-hair.js           PES 16's edit hair: the style and textures a player's save settings name
+    face-layers.js         what PES 16 paints onto the editable face (eyebrows, beard, forehead, eyelids)
   scene/
     stage.js               three.js renderer, scene, camera, lights, grid
     geometry.js            mesh geometry and PES weight scaling
