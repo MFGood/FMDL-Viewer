@@ -101,9 +101,11 @@ function compilerFaceList(dir) {
  * Read every open .xml for the .model files it lists (call after rebuildIndex). Returns problems found.
  *
  * A face folder without a face.xml gets the one the 4cc AET compiler would write for it (compilerFaceList), as
- * exports leave it to the compiler. Hair is the other exception: a face folder's hair_*.model files are always
- * loaded, unless the folder has a hair.xml, which then decides like any other .xml. They use the folder's
- * hair.mtl, else its face.mtl.
+ * exports leave it to the compiler, and so does a gloves folder without a glove.xml (glove_l / glove_r.model,
+ * with glove_l / glove_r.mtl, else materials.mtl). A boots folder has no .xml: the game loads its boots.model,
+ * with boots.mtl. Hair is the other exception: a face folder's hair_*.model files are always loaded, unless
+ * the folder has a hair.xml, which then decides like any other .xml. They use the folder's hair.mtl, else its
+ * face.mtl.
  */
 export async function readModelLists() {
   const lists = new Map(), problems = [];
@@ -131,8 +133,32 @@ export async function readModelLists() {
       if (!lists.has(path.toLowerCase())) lists.set(path.toLowerCase(), { path, mtl, type: 'hair', xml: null });
     }
   }
+  const add = (entry) => { if (!lists.has(entry.path.toLowerCase())) lists.set(entry.path.toLowerCase(), { ...entry, xml: null }); };
+  for (const dir of gearFolders('boots')) {
+    const inDir = (name) => index.real(`${dir}/${name}`);
+    const path = inDir('boots.model');
+    if (path) add({ path, mtl: inDir('boots.mtl') || inDir('materials.mtl'), type: 'boots' });
+  }
+  for (const dir of gearFolders('gloves')) {
+    const inDir = (name) => index.real(`${dir}/${name}`);
+    if (inDir('glove.xml')) continue;
+    for (const side of ['l', 'r']) {
+      const path = inDir(`glove_${side}.model`);
+      if (path) add({ path, mtl: inDir(`glove_${side}.mtl`) || inDir('materials.mtl'), type: `glove${side.toUpperCase()}` });
+    }
+  }
   listedModels = lists;
   return problems;
+}
+
+/** Boots or gloves folders: those directly inside a Boots / Gloves folder (or the game's boots / glove). */
+function gearFolders(kind) {
+  const parent = kind === 'boots' ? /^boots$/i : /^gloves?$/i, dirs = new Set();
+  for (const path of allPaths()) {
+    const dir = dirOf(path);
+    if (dir && parent.test(fileOf(dirOf(dir)))) dirs.add(dir);
+  }
+  return dirs;
 }
 
 /** Face folders: those with a face.xml, and any folder directly inside a Faces folder. */
@@ -145,7 +171,7 @@ function faceFolders() {
   return dirs;
 }
 
-/** Whether a path is a model the viewer loads: any .fmdl, or a .model an .xml lists (or face-folder hair). */
+/** Whether a path is a model the viewer loads: any .fmdl, or a .model an .xml (or readModelLists' rules) lists. */
 export const isModelPath = (path) => /\.fmdl$/i.test(path) || listedModels.has(normPath(path).toLowerCase());
 
 /**
