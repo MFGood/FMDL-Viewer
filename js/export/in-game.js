@@ -12,6 +12,8 @@
 //   skin       a custom skin color hides the arms and thighs, but not the kit (PES 15–17), except that an
 //              arm_bsm or thigh_bsm of the player's own puts its texture on the arms or thighs instead; later
 //              games have no custom skin color, and use the player's own skin textures whatever it is (ownSkinWins)
+//   arms, legs in PES 18–21 the FPC sleeves and socks models carry the arms and thighs, so hiding the sleeves
+//              (long) hides the arms too, and hiding the socks (short) the thighs
 //
 // Without a save, or for players not linked to one, the viewer's own default boots and hands rules apply.
 
@@ -102,7 +104,11 @@ export function inGameLook(player) {
     if (own.socks === 2) hidden.add('Kit Socks');
   }
   if (own.boot_id === 55 || own.boot_id > 100) hidden.add('Shoes');
-  if (pes < 18 && skinFromSave(own) === 7) {
+  if (pes >= 18) {
+    // The FPC mods made the arms and thighs part of the sleeves and socks models.
+    if (hidden.has('Kit Sleeves')) hidden.add('Arms');
+    if (hidden.has('Kit Socks')) hidden.add('Thighs');
+  } else if (skinFromSave(own) === 7) {
     if (!hasOwnTexture(player, 'arm_bsm')) hidden.add('Arms');
     if (!hasOwnTexture(player, 'thigh_bsm')) hidden.add('Thighs');
   }
