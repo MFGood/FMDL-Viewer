@@ -3,7 +3,7 @@
 
 import * as THREE from 'three';
 import { $, isTyping, buttonRow } from './core/dom.js';
-import { initNotices } from './core/notices.js';
+import { initNotices, flashStatus } from './core/notices.js';
 import { options, bindOptions } from './core/options.js';
 import { state } from './core/state.js';
 import { viewedPlayer, settingsOf, setSetting } from './export/players.js';
@@ -20,9 +20,9 @@ import {
 } from './viewer.js';
 import { renderTeam, playablePlayers, stepPlayer, reloadForDefaults } from './ui/team.js';
 import { renderPlayerPanel } from './ui/details.js';
-import { initSettings } from './ui/settings.js';
+import { initSettings, loadSave } from './ui/settings.js';
 import { openBatch, reload, canReload, openSample } from './open/opening.js';
-import { pickedBatch, droppedBatch } from './open/gather.js';
+import { pickedBatch, droppedBatch, batchFiles } from './open/gather.js';
 
 initNotices();
 initSettings();
@@ -114,8 +114,26 @@ addEventListener('drop', (e) => {
   e.preventDefault();
   dragDepth = 0;
   $('drop').hidden = true;
-  droppedBatch(e.dataTransfer).then(openBatch);
+  droppedBatch(e.dataTransfer).then(openDropped);
 });
+
+// A file dropped on its own whose name starts like a PES save's (EDIT00000000 or EDIT.bin, so copies such
+// as EDIT00000000.bak count), or that has no extension, is tried as the save file first; an extensionless
+// file that isn't one is opened as usual.
+const SAVE_NAME = /^EDIT(\d{8}|\.bin)/i;
+async function openDropped(batch) {
+  const items = batch && await batchFiles(batch).catch(() => null);
+  const file = items?.length === 1 && !items[0].path ? items[0].file : null;
+  if (file && (SAVE_NAME.test(file.name) || !file.name.includes('.'))) {
+    const handle = batch.drop?.handles?.[0] ?? null;
+    if (await loadSave(file, handle, !SAVE_NAME.test(file.name))) {
+      flashStatus(`Loaded ${file.name} as the save file`);
+      return;
+    }
+    if (SAVE_NAME.test(file.name)) return;
+  }
+  openBatch(batch);
+}
 
 // ---------------------------------------------------------------- theme, size and drawing
 

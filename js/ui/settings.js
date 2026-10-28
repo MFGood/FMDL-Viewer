@@ -6,7 +6,7 @@
 import { $, buttonRow } from '../core/dom.js';
 import { state } from '../core/state.js';
 import { showError } from '../core/notices.js';
-import { openSave, restoreSave, forgetSave } from '../core/save.js';
+import { openSave, restoreSave, exportSave, forgetSave } from '../core/save.js';
 import { DEFAULT_VERSIONS, defaultVersion, setDefaultVersion, isDefaultModel, isPreFox } from '../export/players.js';
 import { reloadForDefaults, refreshSaveLink } from './team.js';
 
@@ -41,7 +41,7 @@ export function renderDefaultVersions() {
 function renderSave(note = '') {
   const save = state.save;
   refreshSaveLink(); // the open export's team in this save
-  $('saveForget').hidden = !save;
+  $('saveForget').hidden = $('saveExport').hidden = !save;
   if (!save) {
     $('saveInfo').textContent = 'An EDIT00000000 (PES 16–21) or EDIT.bin (PES 15). It stays loaded in the browser between visits.';
     return;
@@ -51,20 +51,43 @@ function renderSave(note = '') {
   $('saveInfo').textContent = `${save.name} · PES ${save.parsed.pes} · ${players.toLocaleString()} players · ${teams.toLocaleString()} teams${note}`;
 }
 
+/**
+ * Load a save picked in the settings or dropped on the window. Resolves to whether it loaded; with quiet,
+ * a file that turns out not to be a save shows no error.
+ * @param {File} file
+ * @param {FileSystemFileHandle} [handle] - where the file came from, so Export can open in its folder
+ */
+export async function loadSave(file, handle = null, quiet = false) {
+  $('saveInfo').textContent = `Reading ${file.name}…`;
+  try {
+    const kept = await openSave(file, handle);
+    renderSave(kept ? '' : ". Couldn't keep it in the browser, so it'll need loading again next visit.");
+    return true;
+  } catch (e) {
+    renderSave();
+    if (!quiet) showError(e.message);
+    return false;
+  }
+}
+
 function initSave() {
   const input = $('saveInput');
-  input.addEventListener('change', async () => {
+  input.addEventListener('change', () => {
     const file = input.files[0];
     input.value = '';  // so picking the same file again still loads it
-    if (!file) return;
-    $('saveInfo').textContent = `Reading ${file.name}…`;
-    try {
-      const kept = await openSave(file);
-      renderSave(kept ? '' : ". Couldn't keep it in the browser, so it'll need loading again next visit.");
-    } catch (e) {
-      renderSave();
-      showError(e.message);
-    }
+    if (file) loadSave(file);
+  });
+  // Where the browser can, pick the save with a file handle instead, so Export can open in its folder
+  input.closest('label').addEventListener('click', async (e) => {
+    if (!window.showOpenFilePicker) return;
+    e.preventDefault();
+    let handle;
+    try { [handle] = await showOpenFilePicker(); } catch { return; }  // cancelled
+    loadSave(await handle.getFile(), handle);
+  });
+
+  $('saveExport').addEventListener('click', async () => {
+    try { await exportSave(); } catch (e) { showError(`Couldn't export ${state.save.name}: ${e.message}`); }
   });
 
   $('saveForget').addEventListener('click', async () => {

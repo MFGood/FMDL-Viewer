@@ -22,8 +22,7 @@ function database() {
 /** Parse save bytes, throwing if they aren't a PES 15–21 save. */
 async function parse(name, bytes) {
   const parsed = new SaveFile();
-  // The PES 15 reader decrypts in place, so give it a copy and keep bytes as they are on disk.
-  if (!await parsed.load(bytes.slice(0))) throw new Error(`${name} isn't a PES 15–21 save file.`);
+  if (!await parsed.load(bytes)) throw new Error(`${name} isn't a PES 15–21 save file.`);
   return parsed;
 }
 
@@ -31,13 +30,14 @@ async function parse(name, bytes) {
  * Read a save the user picked and make it state.save, replacing any other. Resolves to whether it was
  * kept in the browser too (IndexedDB can be unavailable, as in some private windows).
  * @param {File} file
+ * @param {FileSystemFileHandle} [handle] - where the file came from, when picked with showOpenFilePicker
  */
-export async function openSave(file) {
+export async function openSave(file, handle = null) {
   generation++;
   const bytes = await file.arrayBuffer();
-  state.save = { name: file.name, parsed: await parse(file.name, bytes) };
+  state.save = { name: file.name, parsed: await parse(file.name, bytes), handle };
   try {
-    await (await database()).put(STORE, { name: file.name, bytes, savedAt: Date.now() }, KEY);
+    await (await database()).put(STORE, { name: file.name, bytes, handle, savedAt: Date.now() }, KEY);
     return true;
   } catch (e) {
     console.warn("Couldn't keep the save file in the browser:", e);
@@ -52,7 +52,7 @@ export async function restoreSave() {
   if (!kept) return null;
   const parsed = await parse(kept.name, kept.bytes);
   if (generation !== started) return null;  // another save was picked, or this one forgotten, meanwhile
-  state.save = { name: kept.name, parsed };
+  state.save = { name: kept.name, parsed, handle: kept.handle ?? null };
   return state.save;
 }
 
@@ -68,11 +68,37 @@ export function keepSaveEdits() {
     if (state.save !== save || generation !== started) return;
     try {
       const bytes = save.parsed.save();
-      await (await database()).put(STORE, { name: save.name, bytes: bytes.buffer, savedAt: Date.now() }, KEY);
+      await (await database()).put(STORE, { name: save.name, bytes: bytes.buffer, handle: save.handle, savedAt: Date.now() }, KEY);
     } catch (e) {
       console.warn("Couldn't keep the edited save file in the browser:", e);
     }
   }, 500);
+}
+
+/**
+ * Save the save, with any edits made to it, under the name it was loaded with: through a save dialog
+ * opened in the folder it was loaded from where the browser can, else as a download.
+ */
+export async function exportSave() {
+  const { name, parsed, handle } = state.save;
+  const bytes = parsed.save();
+  if (window.showSaveFilePicker) {
+    let target;
+    try {
+      target = await showSaveFilePicker({ suggestedName: name, ...(handle && { startIn: handle }) });
+    } catch (e) {
+      if (e.name === 'AbortError') return;  // cancelled
+      throw e;
+    }
+    const writable = await target.createWritable();
+    await writable.write(bytes);
+    await writable.close();
+    return;
+  }
+  const url = URL.createObjectURL(new Blob([bytes], { type: 'application/octet-stream' }));
+  const link = Object.assign(document.createElement('a'), { href: url, download: name });
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
 /** Drop the save, here and in the browser's storage. */
