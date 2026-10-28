@@ -23,7 +23,7 @@ const refContext = (model, ref) => (ref.baseDir != null ? { ...lookupContext(mod
 
 /**
  * The open file a texture reference resolves to, or null. Kit textures follow the current kit; skin
- * textures follow the player's skin colour (or their own skin textures, linked to a PES 18+ save), looked up
+ * textures follow the player's skin color (or their own skin textures, linked to a PES 18+ save), looked up
  * next to the model first and then in the defaults. With the mesh, the default body's arms and thighs can take
  * the player's own arm_bsm / thigh_bsm (customSkinTexture).
  */
@@ -45,9 +45,9 @@ export function texturePath(model, ref, mesh = null) {
     || (ref.baseDir != null ? resolveTexture(index, ref, lookupContext(model), state.currentKit) : null);
 }
 
-// ---------------------------------------------------------------- skin colour
+// ---------------------------------------------------------------- skin color
 
-/** Skin colour 7: skin_color.dds, thigh_bsm.dds or arm_bsm.dds found as named in the referenced folder. */
+/** Skin color 7: skin_color.dds, thigh_bsm.dds or arm_bsm.dds found as named in the referenced folder. */
 export const CUSTOM_SKIN = 7;
 
 const customSkinPath = (model, ref, skinned) =>
@@ -81,7 +81,7 @@ function firstCustomSkin(kind = null) {
 export const customSkinAvailable = () => firstCustomSkin() != null;
 
 /**
- * Skin colour (1–7) for a model's player, or for loose models when there's no player. Without a choice,
+ * Skin color (1–7) for a model's player, or for loose models when there's no player. Without a choice,
  * the custom skin when the loaded models have one, else 1. A custom skin in a PES 15–17 save stays custom
  * without custom textures (the game then hides the default body's skin).
  */

@@ -43,7 +43,7 @@ function renderSave(note = '') {
   refreshSaveLink(); // the open export's team in this save
   $('saveForget').hidden = !save;
   if (!save) {
-    $('saveInfo').textContent = 'An EDIT00000000 (PES 16–21) or EDIT.bin (PES 15). It stays loaded in this browser between visits.';
+    $('saveInfo').textContent = 'An EDIT00000000 (PES 16–21) or EDIT.bin (PES 15). It stays loaded in the browser between visits.';
     return;
   }
   const players = Object.keys(save.parsed.players).length;
@@ -60,7 +60,7 @@ function initSave() {
     $('saveInfo').textContent = `Reading ${file.name}…`;
     try {
       const kept = await openSave(file);
-      renderSave(kept ? '' : ". Couldn't keep it in this browser, so it'll need loading again next visit.");
+      renderSave(kept ? '' : ". Couldn't keep it in the browser, so it'll need loading again next visit.");
     } catch (e) {
       renderSave();
       showError(e.message);
@@ -68,14 +68,14 @@ function initSave() {
   });
 
   $('saveForget').addEventListener('click', async () => {
-    try { await forgetSave(); } catch (e) { console.warn("Couldn't remove the save file from this browser:", e); }
+    try { await forgetSave(); } catch (e) { console.warn("Couldn't remove the save file from the browser:", e); }
     renderSave();
   });
 
   renderSave();
   restoreSave().then(
     (save) => { if (save) renderSave(); },
-    (e) => console.warn("Couldn't read the save file kept in this browser:", e),
+    (e) => console.warn("Couldn't read the save file kept in the browser:", e),
   );
 }
 

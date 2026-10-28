@@ -53,7 +53,7 @@ const baseRole = (mi) => mi.textures.find(([r]) => /^(Base_Tex|DiffuseMap$)/i.te
 
 function textureFor(model, role, ref, mesh) {
   if (!ref || !options.textures) return null;
-  // A Pre-Fox sampler says its own colour space (srgb="1"); Fox roles end in _SRGB or _LIN.
+  // A Pre-Fox sampler says its own color space (srgb="1"); Fox roles end in _SRGB or _LIN.
   const srgb = ref.srgb ?? /_SRGB$/i.test(role);
   return gpuTexture(texturePath(model, ref, mesh), srgb ? 'srgb' : 'lin');
 }
@@ -243,7 +243,7 @@ function materialFor(mesh, model, map, cls) {
 }
 
 /**
- * Rim colour by angle of incidence. Incidence_Color is RGBA (alpha read as a 0–100 strength); a higher
+ * Rim color by angle of incidence. Incidence_Color is RGBA (alpha read as a 0–100 strength); a higher
  * Incidence_Roughness needs a more grazing angle. The game's exact falloff isn't documented.
  */
 function addFresnelRim(material, mi) {

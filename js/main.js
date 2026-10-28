@@ -119,7 +119,7 @@ addEventListener('drop', (e) => {
 
 // ---------------------------------------------------------------- theme, size and drawing
 
-// Custom background colour, remembered in this browser. Picking a colour turns it on.
+// Custom background color, remembered in the browser. Picking a color turns it on.
 try {
   const saved = JSON.parse(localStorage.getItem('background') || 'null');
   if (saved) { $('tBg').checked = !!saved.on; $('bgColor').value = saved.color; }

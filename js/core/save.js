@@ -29,7 +29,7 @@ async function parse(name, bytes) {
 
 /**
  * Read a save the user picked and make it state.save, replacing any other. Resolves to whether it was
- * kept in this browser too (IndexedDB can be unavailable, as in some private windows).
+ * kept in the browser too (IndexedDB can be unavailable, as in some private windows).
  * @param {File} file
  */
 export async function openSave(file) {
@@ -40,12 +40,12 @@ export async function openSave(file) {
     await (await database()).put(STORE, { name: file.name, bytes, savedAt: Date.now() }, KEY);
     return true;
   } catch (e) {
-    console.warn("Couldn't keep the save file in this browser:", e);
+    console.warn("Couldn't keep the save file in the browser:", e);
     return false;
   }
 }
 
-/** Make the save kept in this browser state.save. Resolves to it, or null if none is kept. */
+/** Make the save kept in the browser state.save. Resolves to it, or null if none is kept. */
 export async function restoreSave() {
   const started = generation;
   const kept = await (await database()).get(STORE, KEY);
@@ -58,7 +58,7 @@ export async function restoreSave() {
 
 let keepTimer = null;
 /**
- * Write edits made to the save's players back into it and keep it in this browser, a moment after the last
+ * Write edits made to the save's players back into it and keep it in the browser, a moment after the last
  * edit (re-encrypting the whole save on every slider step would be wasteful).
  */
 export function keepSaveEdits() {
@@ -70,12 +70,12 @@ export function keepSaveEdits() {
       const bytes = save.parsed.save();
       await (await database()).put(STORE, { name: save.name, bytes: bytes.buffer, savedAt: Date.now() }, KEY);
     } catch (e) {
-      console.warn("Couldn't keep the edited save file in this browser:", e);
+      console.warn("Couldn't keep the edited save file in the browser:", e);
     }
   }, 500);
 }
 
-/** Drop the save, here and in this browser's storage. */
+/** Drop the save, here and in the browser's storage. */
 export async function forgetSave() {
   generation++;
   state.save = null;

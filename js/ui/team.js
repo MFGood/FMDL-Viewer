@@ -94,7 +94,7 @@ function renderSaveLink() {
   if (link.team && !changingTeam) {
     const change = el('button', { type: 'button', class: 'linkish' }, 'Change');
     change.addEventListener('click', () => { changingTeam = true; renderSaveLink(); $('saveTeamId').focus(); });
-    text.append(`Names, body shapes and skin colours from ${link.team.name} (ID ${link.team.id}) in ${state.save.name}. `, change);
+    text.append(`Names, body shapes and skin colors from ${link.team.name} (ID ${link.team.id}) in ${state.save.name}. `, change);
     return;
   }
   const name = state.aet.teamName;
@@ -119,7 +119,7 @@ $('saveLink').addEventListener('submit', async (e) => {
 
 /**
  * Show the export's link to the save as it is now: names in the roster, and the viewed player reloaded, as
- * the save decides their default models, body shape and skin colour.
+ * the save decides their default models, body shape and skin color.
  */
 async function showSaveLink() {
   await reloadForDefaults();

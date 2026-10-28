@@ -225,7 +225,7 @@ async function checkReadable(batch) {
       if (isGone(e)) { gone.push(item); continue; } // deleted: just leave it out
       return {
         gone,
-        problem: `${item.file.name} changed on disk, and this browser won't re-read files chosen with the Open buttons once they change. Open or drop it again: the viewer will see it's the same one and keep your player, kit and view.`,
+        problem: `${item.file.name} changed on disk, and the browser won't re-read files chosen with the Open buttons once they change. Open or drop it again: the viewer will see it's the same one and keep your player, kit and view.`,
       };
     }
   }

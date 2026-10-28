@@ -143,7 +143,7 @@ let refreshCount = 0;
 export async function refreshMaterials() {
   const refresh = ++refreshCount;
   pickCurrentKit();
-  applyVisibility(); // linked to the save, the kit's config and the skin colour decide what of the default body shows
+  applyVisibility(); // linked to the save, the kit's config and the skin color decide what of the default body shows
   renderKits();
   renderSkins();
   const needed = [...texturesNeeded(state.meshObjects)];
@@ -173,7 +173,7 @@ export function stepKit(direction) {
   selectKit(kits[(kits.indexOf(state.currentKit) + direction + kits.length) % kits.length]);
 }
 
-/** Skin colour for the viewed player (or for loose models). */
+/** Skin color for the viewed player (or for loose models). */
 export function selectSkin(n) {
   const player = viewedPlayer(), own = savePlayerOf(player);
   if (own) {
@@ -235,7 +235,7 @@ export async function applyBodyShapeOption() {
   else await applyRunOption();
 }
 
-/** Redraw what uses theme colours. */
+/** Redraw what uses theme colors. */
 export function applyTheme() {
   if (!state.models.length) return;
   buildBoxes();

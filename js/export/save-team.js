@@ -1,11 +1,11 @@
 // save-team.js — the open export's team in the loaded save file. The export's team name (the "Team:" line of
 // its note) is looked up among the save's teams; if it isn't there, or more than one team has it, the note's
 // "ID:" line is tried, then a team ID the user gives (remembered for that team name). Linked players show
-// their names from the save, and their body shape and skin colour are the save's, edited in place.
+// their names from the save, and their body shape and skin color are the save's, edited in place.
 
 import { state } from '../core/state.js';
 
-// Team IDs given for export team names, remembered in this browser: { team name: ID }.
+// Team IDs given for export team names, remembered in the browser: { team name: ID }.
 const STORAGE_KEY = 'saveTeamIds';
 const remembered = () => { try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch { return {}; } };
 
@@ -56,7 +56,7 @@ export function useTeamId(id) {
   return true;
 }
 
-/** A save player's name without the colour codes PES names can hold (0x11, "c", RRGGBBAA). */
+/** A save player's name without the color codes PES names can hold (0x11, "c", RRGGBBAA). */
 export const plainName = (name) => (name || '').replace(/\x11c[0-9a-f]{8}/gi, '').trim();
 
 function setLink(link) {
@@ -70,7 +70,7 @@ function setLink(link) {
 }
 
 /**
- * A save player's skin colour as the viewer numbers it: 1–6 as in the game, 7 custom; null when unset (0).
+ * A save player's skin color as the viewer numbers it: 1–6 as in the game, 7 custom; null when unset (0).
  * PES 18 on has no custom skin, so the reader loads a stored 7 as 0 with b_changed.
  */
 export function skinFromSave(savePlayer) {
@@ -78,7 +78,7 @@ export function skinFromSave(savePlayer) {
   return n >= 1 && n <= 7 ? n : null;
 }
 
-/** Set a save player's skin colour (1–7), the way the reader would have loaded it. */
+/** Set a save player's skin color (1–7), the way the reader would have loaded it. */
 export function skinToSave(savePlayer, n) {
   const custom = n === 7 && parseInt(state.save.parsed.pes) >= 18;
   savePlayer.skin_col = custom ? 0 : n;

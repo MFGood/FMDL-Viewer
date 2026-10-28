@@ -1,5 +1,5 @@
 // players.js — rules for export players: which models they show (their own plus any defaults), their
-// per-player settings (skin colour, default-model override), and how they're named in the roster.
+// per-player settings (skin color, default-model override), and how they're named in the roster.
 
 import { options } from '../core/options.js';
 import { state } from '../core/state.js';
@@ -19,7 +19,7 @@ export const DEFAULT_VERSIONS = { 17: 'PES 17', 21: 'PES 21' };
 /**
  * The default models and their textures, in assets/defaults/: a PES body without a head (boots.<version>.fmdl,
  * with kit, shoes and skin meshes) and hands (glove_l / glove_r.<version>.fmdl), with skin, thigh and arm
- * textures in skin colours 1–6.
+ * textures in skin colors 1–6.
  */
 export const DEFAULT_FILES = [
   ...Object.keys(DEFAULT_VERSIONS).flatMap((v) => [`boots.${v}.fmdl`, `glove_l.${v}.fmdl`, `glove_r.${v}.fmdl`]),
@@ -32,7 +32,7 @@ export const isDefaultModel = (path) => path.startsWith(`${DEFAULTS}/`);
 /** Whether any of these model paths is a Pre-Fox .model (PES 16 / 17). */
 export const isPreFox = (paths) => paths.some((p) => /\.model$/i.test(p));
 
-// Which version of the default models is used, remembered in this browser: one choice for Fox (.fmdl)
+// Which version of the default models is used, remembered in the browser: one choice for Fox (.fmdl)
 // players, PES 21 to start with, and one for Pre-Fox (.model) players, PES 17 to start with.
 const STORAGE_KEYS = { fox: 'defaultModels', prefox: 'defaultModelsPreFox' };
 const versions = { fox: '21', prefox: '17' };
@@ -128,23 +128,23 @@ export function defaultHandsLabel(parts) {
   return parts.left && parts.right ? 'hands' : parts.left ? 'left hand' : parts.right ? 'right hand' : null;
 }
 
-// ---------------------------------------------------------------- skin colour
+// ---------------------------------------------------------------- skin color
 
-// Skin-coloured textures. Meshes reference skin_color(_0).dds, thigh_bsm.dds or arm_bsm.dds; PES swaps in
-// the player's skin colour (skin_color_1 … _6, thigh_1_bsm … _6, arm_1_bsm … _6). When the texture is found
-// as named in the referenced folder, it's offered as a 7th, custom colour.
+// Skin-colored textures. Meshes reference skin_color(_0).dds, thigh_bsm.dds or arm_bsm.dds; PES swaps in
+// the player's skin color (skin_color_1 … _6, thigh_1_bsm … _6, arm_1_bsm … _6). When the texture is found
+// as named in the referenced folder, it's offered as a 7th, custom color.
 const SKIN_TEXTURES = [
   { pattern: /^skin_color(_\d+)?$/i, custom: 'skin_color', numbered: (n) => `skin_color_${n}` },
   { pattern: /^thigh(_\d+)?_bsm$/i, custom: 'thigh_bsm', numbered: (n) => `thigh_${n}_bsm` },
   { pattern: /^arm(_\d+)?_bsm$/i, custom: 'arm_bsm', numbered: (n) => `arm_${n}_bsm` },
 ];
 
-/** Which skin-coloured texture a reference is ({ custom, numbered(n) }), or null. */
+/** Which skin-colored texture a reference is ({ custom, numbered(n) }), or null. */
 export const skinTexture = (ref) => SKIN_TEXTURES.find((t) => t.pattern.test(stem(ref.filename))) || null;
 
 export const usesSkin = (ref) => !!skinTexture(ref);
 
-/** The skin colour (1–7) chosen for a model's player, or for loose models when there's no player; null if none. */
+/** The skin color (1–7) chosen for a model's player, or for loose models when there's no player; null if none. */
 export function chosenSkin(player) {
   const own = savePlayerOf(player);
   if (own) return skinFromSave(own);

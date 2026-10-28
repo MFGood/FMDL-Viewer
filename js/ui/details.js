@@ -1,4 +1,4 @@
-// details.js — the right-hand panel: counts, kits, skin colour, the "This player" settings, the model
+// details.js — the right-hand panel: counts, kits, skin color, the "This player" settings, the model
 // tree and the materials list.
 
 import { $, el, checkbox, buttonRow } from '../core/dom.js';
@@ -38,8 +38,8 @@ export function renderKits() {
 }
 
 /**
- * Skin colours 1–6 (plus 7 for custom skin textures), shown when a loaded mesh uses a skin texture. A player
- * linked to a PES 15–17 save always has the game's Custom skin colour too, as "C".
+ * Skin colors 1–6 (plus 7 for custom skin textures), shown when a loaded mesh uses a skin texture. A player
+ * linked to a PES 15–17 save always has the game's Custom skin color too, as "C".
  */
 export function renderSkins() {
   const used = state.meshObjects.some((m) => m.mesh.materialInstance.textures.some(([, ref]) => usesSkin(ref)));

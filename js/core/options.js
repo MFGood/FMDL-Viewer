@@ -35,7 +35,7 @@ const CHECKBOX_IDS = {
   weightScaling: 'tWeight',
 };
 
-// The checkboxes as last set, remembered in this browser: { name: checked }.
+// The checkboxes as last set, remembered in the browser: { name: checked }.
 const STORAGE_KEY = 'displayOptions';
 
 function savedOptions() {
@@ -47,7 +47,7 @@ function saveOptions() {
 }
 
 /**
- * Set the checkboxes as they were last left in this browser, read them, and keep `options` in step with
+ * Set the checkboxes as they were last left in the browser, read them, and keep `options` in step with
  * them. onChange[name]() runs after each change.
  */
 export function bindOptions(onChange) {

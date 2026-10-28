@@ -13,7 +13,7 @@ export const state = {
   currentKit: null,
   /** The kit last picked; shown whenever the loaded model has it. */
   chosenKit: null,
-  /** Skin colour (1–7) picked for models opened on their own, or null for the default. Export players each keep their own. */
+  /** Skin color (1–7) picked for models opened on their own, or null for the default. Export players each keep their own. */
   looseSkin: null,
   /** Body shape ({ setting: 0–14 }) set for models opened on their own, or null. Export players each keep their own. */
   looseShape: null,

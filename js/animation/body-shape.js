@@ -91,7 +91,7 @@ export const isNeutral = (shape) => !shape || SHAPE_SETTINGS.every(({ key }) => 
 
 /**
  * The body shape set for what's shown, neutral or not: the viewed export player's in the save file when the
- * export is linked to a team there, else the one set for them in this browser, or the one for loose models.
+ * export is linked to a team there, else the one set for them in the browser, or the one for loose models.
  */
 export function shownShape() {
   const player = viewedPlayer(), own = savePlayerOf(player);

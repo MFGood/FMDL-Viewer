@@ -3,7 +3,7 @@
 /** The element with this id. */
 export const $ = (id) => document.getElementById(id);
 
-/** The current value of a CSS custom property on the page (theme colours). */
+/** The current value of a CSS custom property on the page (theme colors). */
 export const cssVar = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
 
 /** Create an element: el('div', { class: 'x', title: 'y' }, child, 'text', ...). null children are skipped. */
@@ -27,7 +27,7 @@ export function checkbox(text, checked, onChange) {
   return { input, label: el('label', { class: 'chk', for: id }, input, text) };
 }
 
-/** A row of toggle buttons (kits, skin colours): items are { label, title?, on, onClick }. */
+/** A row of toggle buttons (kits, skin colors): items are { label, title?, on, onClick }. */
 export function buttonRow(container, items) {
   container.textContent = '';
   for (const item of items) {

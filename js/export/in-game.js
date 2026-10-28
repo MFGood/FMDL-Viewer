@@ -9,9 +9,9 @@
 //   boots      boots 55, or any ID over 100 (a modded team's: their own boots model, or nothing)
 //   hands      a GK gloves ID that doesn't exist (11–100; 1–10 are goalkeeper gloves), or any over 100;
 //              in PES 18 also an arm_bsm texture of the player's own (a transparent one hides summer hands)
-//   skin       a custom skin colour hides the arms and thighs, but not the kit (PES 15–17), except that an
+//   skin       a custom skin color hides the arms and thighs, but not the kit (PES 15–17), except that an
 //              arm_bsm or thigh_bsm of the player's own puts its texture on the arms or thighs instead; later
-//              games have no custom skin colour, and use the player's own skin textures whatever it is (ownSkinWins)
+//              games have no custom skin color, and use the player's own skin textures whatever it is (ownSkinWins)
 //
 // Without a save, or for players not linked to one, the viewer's own default boots and hands rules apply.
 
@@ -70,7 +70,7 @@ function ownTexture(player, name) {
 const hasOwnTexture = (player, name) => !!ownTexture(player, name);
 
 /**
- * For the default body's arms or thighs under a custom skin colour in PES 15–17, the player's own arm_bsm or
+ * For the default body's arms or thighs under a custom skin color in PES 15–17, the player's own arm_bsm or
  * thigh_bsm, which the game puts on them (whatever texture the default model names); else null.
  */
 export function customSkinTexture(model, mesh) {
@@ -110,12 +110,12 @@ export function inGameLook(player) {
   return { hidden, hands };
 }
 
-/** Whether the player's skin colour in the save can be custom (7, "C"): PES 15–17 have it, later games don't. */
+/** Whether the player's skin color in the save can be custom (7, "C"): PES 15–17 have it, later games don't. */
 export const saveHasCustomSkin = (player) => !!savePlayerOf(player) && parseInt(state.save.parsed.pes) < 18;
 
 /**
  * Whether the player's own skin textures (arm_bsm, thigh_bsm, skin_color in their folders) win over their skin
- * colour: in PES 18 on, which has no custom skin colour, they always do (a transparent arm_bsm hides the hands).
+ * color: in PES 18 on, which has no custom skin color, they always do (a transparent arm_bsm hides the hands).
  */
 export const ownSkinWins = (player) => !!savePlayerOf(player) && parseInt(state.save.parsed.pes) >= 18;
 

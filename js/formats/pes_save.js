@@ -859,7 +859,7 @@ export class SaveFile {
     }
 
     /**
-     * Skin colour as stored: PES 18+ loads a custom skin (7) as 0 and sets b_changed
+     * Skin color as stored: PES 18+ loads a custom skin (7) as 0 and sets b_changed
      * @param {Object} player
      * @returns {number}
      */
