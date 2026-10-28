@@ -3,10 +3,11 @@
 //
 // A style is length_type_direction(_hairline)_part, e.g. lg_nr_bk_00_NM or md_af_up_WD, with _acc for the
 // medium and long styles with the accessory (a hairband); short hair is sh_<part>, and the special styles
-// sp_ty001 … sp_ty029. The hair .mtl files name no textures: the game gives the strands a parts texture
-// (<style or type>_sb0 … sb3) and the head under them a shell texture (S_<style>_<O / V / M>_<part>_pt<NN>),
-// both gray, colored by the hair color (as an overlay: the texture's mid-gray takes the color). The editable
-// face gets this hair when the face folder has no hair of its own; the hair's head then replaces headHi.
+// sp_ty001 … sp_ty029. The hair .mtl files name no textures: the game gives the hair cards a parts texture
+// (<style or type>_sb0 … sb3) and the tube (the hair's blended layer over the scalp) a shell texture
+// (S_<style>_<O / V / M>_<part>_pt<NN>, in the tube's own UVs), both gray, colored by the hair color (as an
+// overlay: the texture's mid-gray takes the color). The editable face gets this hair when the face folder has
+// no hair of its own; the hair's head (skin under the tube) then replaces headHi.
 
 import { HAIR_STYLES } from './edit-hair-styles.js';
 
@@ -68,22 +69,24 @@ export const hairModel = (style) => `${HAIR_DIR}/model/${style}/hair_high_win32.
 export const hairStyleOf = (path) => new RegExp(`/${HAIR_DIR}/model/([^/]+)/hair_high_win32\\.model$`, 'i').exec(path)?.[1] ?? null;
 
 /**
- * Give an edit hair model its textures and color. The strands (the Hair shaders) take the parts texture, tinted
- * by the hair color. The hair model's head (head_phong, which stands in for the editable face's headHi) takes the
- * skin texture, following the skin color, with the shell layered over it in the hair color, as the game puts the
- * shell on the skin. A material left without a texture is hidden. `dir` is where the default models are.
+ * Give an edit hair model its textures and color. The tube (hairTubeShader) takes the shell texture and the hair
+ * cards (the other Hair materials) the parts texture, both tinted by the hair color. The hair model's head
+ * (head_phong, which stands in for the editable face's headHi) takes the skin texture, following the skin color.
+ * A material left without a texture is hidden. `dir` is where the default models are.
  */
 export function dressEditHair(parsed, hair, dir) {
   const bare = new Set(), image = (sub, name) => ({ filename: `${name}.avif`, directory: './', baseDir: `${dir}/${HAIR_DIR}/${sub}`, srgb: true });
   for (const mi of parsed.materialInstances) {
-    if (mi.name.toLowerCase() === 'head_phong') {
+    const name = mi.name.toLowerCase();
+    if (name === 'head_phong') {
       mi.textures.unshift(['DiffuseMap', { filename: 'head_color_w.dds', directory: './', baseDir: `${dir}/face`, srgb: true }]);
-      if (hair.shell) mi.textures.push(['LayerMap', { ...image('shell', hair.shell), tint: hair.color }]);
-    } else if (hair.parts) {
-      mi.textures.unshift(['DiffuseMap', image('parts', hair.parts)]);
-      mi.tint = hair.color;
-    } else bare.add(mi);
+      continue;
+    }
+    const [sub, texture] = name === 'hairtubeshader' ? ['shell', hair.shell] : ['parts', hair.parts];
+    if (!texture) { bare.add(mi); continue; }
+    mi.textures.unshift(['DiffuseMap', image(sub, texture)]);
+    mi.tint = hair.color;
   }
-  // Without a texture (the strands of short hair) the game draws nothing there: mark those meshes invisible.
+  // Without a texture (the cards of short hair) the game draws nothing there: mark those meshes invisible.
   for (const mesh of parsed.meshes) if (bare.has(mesh.materialInstance)) mesh.shadowFlags |= 0x2;
 }
