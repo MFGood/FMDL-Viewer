@@ -52,6 +52,27 @@ export class FileIndex {
 
 /* ---------- export layout ---------- */
 
+// The .fmdl names the game loads from a Fox face, boots or gloves folder, each optionally after a prefix and an
+// underscore ("lia_face_high.fmdl"), as the 4cc AET compiler allows them.
+const FOX_MODEL_NAMES = { face: ['face_high', 'hair_high', 'oral', 'fcl_hair'], boots: ['boots'], gloves: ['glove_l', 'glove_r'] };
+
+/**
+ * The models of a face, boots or gloves folder the game loads: every .model (an .xml or the folder's rules
+ * decide those), and the .fmdl files named as FOX_MODEL_NAMES has it, the first of each name; a face folder
+ * without fcl_hair also loads one .fmdl of any other name, which the compiler renames fcl_hair.
+ */
+function gameModels(paths, kind) {
+  const names = FOX_MODEL_NAMES[kind], seen = new Set(), odd = [], out = [];
+  for (const path of [...paths].sort()) {
+    if (!/\.fmdl$/i.test(path)) { out.push(path); continue; }
+    const s = stem(path), name = names.find((n) => s === n || s.endsWith(`_${n}`));
+    if (!name) odd.push(path);
+    else if (!seen.has(name)) { seen.add(name); out.push(path); }
+  }
+  if (kind === 'face' && !seen.has('fcl_hair') && odd.length === 1) out.push(odd[0]);
+  return out.sort();
+}
+
 /** The folder that holds "Kit Textures" (shallowest wins); falls back to one holding other AET folders. */
 export function findRoot(index) {
   const known = ['kit textures', 'faces', 'boots', 'gloves', 'logo', 'portraits', 'kit configs', 'common', 'collars'];
@@ -76,21 +97,27 @@ export function gearSlot(id) {
 }
 
 /**
- * Read an export's structure. `readText(path)` returns a file's text (async).
- * Returns { root, teamName, notePath, logoPath, kitDir, commonDir, players, collars }.
+ * Read an export's structure. `readText(path)` returns a file's text (async); `isModel(path)` says which
+ * files are models to show (.fmdl, and Pre-Fox .model files their .xml lists); `listedFor(dir)` gives the
+ * models a folder's list has elsewhere (Common ones). The players' `fmdls` lists hold both kinds.
+ * Returns { root, teamName, teamId, notePath, logoPath, kitConfigDir, kitDir, commonDir, players, collars }.
  */
-export async function scanExport(index, readText) {
+export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.test(p), listedFor = () => []) {
   const root = findRoot(index);
   if (root === null) return null;
   const folder = (name) => index.subdir(root, name);
-  const out = { root, teamName: null, notePath: null, logoPath: null, kitDir: folder('Kit Textures'), commonDir: folder('Common'), players: [], collars: [] };
+  const out = { root, teamName: null, teamId: null, notePath: null, logoPath: null, kitDir: folder('Kit Textures'), kitConfigDir: folder('Kit Configs'), commonDir: folder('Common'), players: [], collars: [] };
 
-  // Team note: a .txt at the top level, preferring one with "note" in its name. First "Team:" line.
+  // Team note: a .txt at the top level, preferring one with "note" in its name. First "Team:" line, and the
+  // "ID:" line under it if there is one.
   const txts = index.filesIn(root).filter((p) => /\.txt$/i.test(p)).sort((a, b) => /note/i.test(fileOf(b)) - /note/i.test(fileOf(a)));
   for (const p of txts) {
     const text = await readText(p);
     const m = /^\s*team\s*:\s*(.*?)\s*$/im.exec(text);
-    if (m && m[1]) { out.teamName = m[1]; out.notePath = p; break; }
+    if (m && m[1]) {
+      Object.assign(out, { teamName: m[1], notePath: p, teamId: /^\s*id\s*:\s*(\d+)\s*$/im.exec(text)?.[1] ?? null });
+      break;
+    }
     if (!out.notePath) out.notePath = p;
   }
 
@@ -101,15 +128,16 @@ export async function scanExport(index, readText) {
     out.logoPath = pngs.find((p) => /^emblem_0.{3}_r\.png$/i.test(fileOf(p))) || pngs.find((p) => /_r\.png$/i.test(p)) || pngs[0] || null;
   }
 
-  // Portraits folder: player_XXXnn.dds -> team number nn.
+  // Portraits folder: player_….dds, the last two digits the team number (01–23), as the 4cc AET compiler reads them.
   const portraitsByNumber = new Map();
   const portraitsDir = folder('Portraits');
   if (portraitsDir) for (const p of index.filesIn(portraitsDir)) {
-    const m = /^player_(?:[xX]{3})?(\d{2})\.dds$/i.exec(fileOf(p));
-    if (m) portraitsByNumber.set(+m[1], p);
+    const m = /^player_.*?(\d{2})\.dds$/i.exec(fileOf(p));
+    if (m && +m[1] >= 1 && +m[1] <= 23) portraitsByNumber.set(+m[1], p);
   }
 
-  const fmdlsUnder = (dir) => index.filesUnder(dir).filter((p) => /\.fmdl$/i.test(p)).sort();
+  // A folder's models, and those its list has elsewhere (Common models through .common links).
+  const fmdlsUnder = (dir, kind) => gameModels([...new Set([...index.filesUnder(dir).filter(isModel), ...listedFor(dir)])], kind);
   const players = [];
 
   // Faces: "XXXnn - Player Name".
@@ -120,7 +148,7 @@ export async function scanExport(index, readText) {
     players.push({
       number: m ? +m[2] : null,
       name: cleanName(m ? m[3] || '' : fileOf(dir)) || null,
-      face: { dir, fmdls: fmdlsUnder(dir) },
+      face: { dir, fmdls: fmdlsUnder(dir, 'face') },
       portrait: files.find((p) => /portrait\.dds$/i.test(p)) || null,
     });
   }
@@ -132,11 +160,12 @@ export async function scanExport(index, readText) {
     const base = folder(folderName);
     if (!base) continue;
     for (const dir of index.subdirs(base)) {
-      const m = new RegExp(`^${letter}(\\d{4})(?:\\s*-\\s*(.*))?`, 'i').exec(fileOf(dir));
-      const id = m ? m[1] : fileOf(dir);
+      // The 4cc AET compiler pads a 3-digit gloves ID (g567 → g0567).
+      const m = new RegExp(`^${letter}(\\d{${letter === 'g' ? '3,4' : '4'}})(?!\\d)(?:\\s*-\\s*(.*))?`, 'i').exec(fileOf(dir));
+      const id = m ? m[1].padStart(4, '0') : fileOf(dir);
       if (!gear.has(id)) gear.set(id, { id, name: null, boots: null, gloves: null });
       const g = gear.get(id);
-      g[kind] = { dir, fmdls: fmdlsUnder(dir) };
+      g[kind] = { dir, fmdls: fmdlsUnder(dir, kind) };
       const nm = cleanName(m ? m[2] || '' : '');
       if (nm && (!g.name || kind === 'boots')) g.name = nm;
     }
@@ -170,7 +199,7 @@ export async function scanExport(index, readText) {
   out.players = players;
 
   const collarsDir = folder('Collars');
-  if (collarsDir) out.collars = index.filesIn(collarsDir).filter((p) => /\.fmdl$/i.test(p));
+  if (collarsDir) out.collars = index.filesIn(collarsDir).filter(isModel);
   return out;
 }
 

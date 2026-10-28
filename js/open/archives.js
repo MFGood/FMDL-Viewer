@@ -1,7 +1,7 @@
 // archives.js — reading .zip, .7z and .rar files. Both return the files inside as [{ path, read }].
 //
 // .zip uses JSZip, which reads entries on demand. .7z and .rar use 7-Zip 24.09 compiled to WebAssembly
-// (7z-wasm, LGPL; RAR decoding under the unRAR licence restriction), which runs in a worker and
+// (7z-wasm, LGPL; RAR decoding under the unRAR license restriction), which runs in a worker and
 // extracts everything up front. Both libraries are loaded the first time they're needed.
 
 import { loadScript } from '../core/dom.js';

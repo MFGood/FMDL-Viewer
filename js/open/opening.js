@@ -7,10 +7,13 @@
 import { $ } from '../core/dom.js';
 import {
   LOOSE, index, addSource, removeSources, clearSources, rebuildIndex, allPaths, readText, isGone, fetchAsset,
+  readModelLists, isModelPath, modelsListedFor,
 } from '../core/files.js';
 import { setStatus, flashStatus, showError, hideError, forgetDismissedErrors } from '../core/notices.js';
 import { state } from '../core/state.js';
-import { normPath, scanExport } from '../formats/aet.js';
+import { normPath, fileOf, scanExport } from '../formats/aet.js';
+import { linkSaveTeam } from '../export/save-team.js';
+import { readKitConfigs } from '../export/in-game.js';
 import { DEFAULTS, DEFAULT_FILES, playerSettings } from '../export/players.js';
 import { forgetTextures } from '../scene/textures.js';
 import { cameraView } from '../scene/framing.js';
@@ -62,15 +65,22 @@ function playerToOpen() {
 async function openExport(label) {
   rebuildIndex();
   setStatus('Reading export…');
-  state.aet = await scanExport(index, readText);
+  const listProblems = await readModelLists();
+  state.aet = await scanExport(index, readText, isModelPath, modelsListedFor);
+  if (state.aet) state.aet.kitConfigs = await readKitConfigs(state.aet);
+  linkSaveTeam();
   if (!state.aet) {
     setStatus(null);
     // Not an export: show any models it contains as loose files.
-    const models = allPaths().filter((p) => /\.fmdl$/i.test(p));
-    if (!models.length) { showError(`${label} doesn't look like an aesthetics export: no "Kit Textures" folder and no .fmdl files.`); return; }
+    const models = allPaths().filter((p) => isModelPath(p) && !p.startsWith(`${DEFAULTS}/`));
+    if (!models.length) {
+      showError(`${label} doesn't look like an aesthetics export: no "Kit Textures" folder and no .fmdl files${unlistedNote(allPaths())}.`);
+      return;
+    }
     await renderTeam();
-    await loadModels(models, label);
-    showError(`${label} has no "Kit Textures" folder, so it isn't treated as an aesthetics export. Showing its .fmdl files.`);
+    await loadModels(models, label, null, [
+      `${label} has no "Kit Textures" folder, so it isn't treated as an aesthetics export. Showing its models.`, ...listProblems,
+    ]);
     return;
   }
   await renderTeam();
@@ -107,27 +117,44 @@ async function openFolder(items, label) {
   await openExport(label);
 }
 
+/** " (… .model files, which no .xml lists)", for messages about what wasn't found, or ''. */
+function unlistedNote(paths) {
+  const unlisted = paths.filter((p) => /\.model$/i.test(p) && !isModelPath(p));
+  if (!unlisted.length) return '';
+  const names = unlisted.slice(0, 3).map(fileOf).join(', ') + (unlisted.length > 3 ? '…' : '');
+  return ` (${names}: .model files are only loaded when an .xml next to them lists them, with their .mtl)`;
+}
+
 /**
- * Loose .fmdl / .dds / .ftex files. They're looked up next to each other, and an open export's Kit
- * Textures and Common folders still apply. Returns false if they were only textures (added, not replacing).
+ * Loose .fmdl / .dds / .ftex files, or Pre-Fox .model files with the .xml that lists them and their .mtl.
+ * They're looked up next to each other, and an open export's Kit Textures and Common folders still apply.
+ * Returns false if they were only textures or materials (added, not replacing).
  */
 async function openLoose(files) {
-  const models = files.filter((f) => /\.fmdl$/i.test(f.name));
-  const textures = files.filter((f) => /\.(dds|ftex)$/i.test(f.name));
-  if (!models.length && !textures.length) {
-    showError('Open an aesthetics export (.zip, .7z, .rar or folder), or .fmdl files with their .dds / .ftex textures.');
+  const models = files.filter((f) => /\.(fmdl|model)$/i.test(f.name));
+  const support = files.filter((f) => /\.(dds|ftex|png|jpe?g|xml|mtl)$/i.test(f.name));
+  if (!models.length && !support.length) {
+    showError('Open an aesthetics export (.zip, .7z, .rar or folder), .fmdl files with their .dds / .ftex textures, or .model files with their .xml, .mtl and textures.');
     return true;
   }
   if (models.length) removeSources((key) => key.startsWith(`${LOOSE}/`));
-  for (const file of [...models, ...textures]) {
+  for (const file of [...models, ...support]) {
     const path = `${LOOSE}/${file.name}`;
     addSource(path, () => file.arrayBuffer());
     forgetTextures(path); // a newer copy of a texture already shown
   }
   rebuildIndex();
+  const listProblems = await readModelLists();
   if (!models.length) { await refreshMaterials(); return false; }
+  const paths = models.map((f) => `${LOOSE}/${f.name}`), shown = paths.filter(isModelPath);
   markActive(null);
-  await loadModels(models.map((f) => `${LOOSE}/${f.name}`), models.map((f) => f.name).join(', '));
+  if (!shown.length) {
+    showNoModels();
+    showError(`Nothing to show${unlistedNote(paths)}.`);
+    return true;
+  }
+  const unlisted = unlistedNote(paths).replace(/^ \((.*)\)$/, 'Not shown: $1');
+  await loadModels(shown, shown.map(fileOf).join(', '), null, [...listProblems, unlisted].filter(Boolean));
   return true;
 }
 
@@ -198,7 +225,7 @@ async function checkReadable(batch) {
       if (isGone(e)) { gone.push(item); continue; } // deleted: just leave it out
       return {
         gone,
-        problem: `${item.file.name} changed on disk, and this browser won't re-read files chosen with the Open buttons once they change. Open or drop it again: the viewer will see it's the same one and keep your player, kit and view.`,
+        problem: `${item.file.name} changed on disk, and the browser won't re-read files chosen with the Open buttons once they change. Open or drop it again: the viewer will see it's the same one and keep your player, kit and view.`,
       };
     }
   }

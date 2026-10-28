@@ -1,6 +1,6 @@
 // textures.js — decoding texture files and turning them into GPU textures.
-// Each file is decoded once; GPU textures are made per colour space on demand
-// (_SRGB roles are colour, _LIN roles are linear data, timing textures are read unfiltered).
+// Each file is decoded once; GPU textures are made per color space on demand
+// (_SRGB roles are color, _LIN roles are linear data, timing textures are read unfiltered).
 
 import * as THREE from 'three';
 import { readFile } from '../core/files.js';
@@ -68,7 +68,7 @@ function makeDataTexture(entry, { srgb, nearest }) {
   return texture;
 }
 
-/** GPU texture for a decoded file, in 'srgb' (colour) or 'lin' (data) colour space. null if not available. */
+/** GPU texture for a decoded file, in 'srgb' (color) or 'lin' (data) color space. null if not available. */
 export function gpuTexture(path, space) {
   const entry = path && decoded.get(path.toLowerCase());
   if (!entry || entry.error) return null;

@@ -47,11 +47,11 @@ export const lineMaterials = new Set();
 
 // ---------------------------------------------------------------- ground grid
 
-// Fixed: centred on the origin at floor height, 5 m out in every horizontal direction (10 m × 10 m),
-// with 1 m squares. The two lines through the origin are drawn in the accent colour.
+// Fixed: centered on the origin at floor height, 5 m out in every horizontal direction (10 m × 10 m),
+// with 1 m squares. The two lines through the origin are drawn in the accent color.
 let grid = null;
 
-/** (Re)build the grid in the current theme's colours. */
+/** (Re)build the grid in the current theme's colors. */
 export function makeGrid() {
   if (grid) { scene.remove(grid); grid.geometry.dispose(); grid.material.dispose(); }
   grid = new THREE.GridHelper(10, 10, new THREE.Color(cssVar('--accent')), new THREE.Color(cssVar('--muted')));
@@ -65,7 +65,7 @@ export function showGrid(on) { if (grid) grid.visible = on; }
 
 // ---------------------------------------------------------------- background
 
-/** The viewport background: a CSS colour, or null for the theme's. */
+/** The viewport background: a CSS color, or null for the theme's. */
 export function setBackground(color) { stage.style.background = color || ''; }
 
 // ---------------------------------------------------------------- size and drawing

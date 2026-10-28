@@ -2,23 +2,29 @@
 // textures, kits or options change, and which meshes are shown.
 
 import * as THREE from 'three';
-import { readFile, isGone } from './core/files.js';
+import { readFile, readGameText, isGone, listedModels, kitOfModel } from './core/files.js';
 import { setStatus, showError, hideError } from './core/notices.js';
 import { options } from './core/options.js';
 import { state } from './core/state.js';
 import { $ } from './core/dom.js';
 import { parseFmdl } from './formats/fmdl.js';
+import { parseModel } from './formats/model.js';
+import { parseMtl, attachMaterials } from './formats/mtl.js';
 import { dirOf, fileOf } from './formats/aet.js';
 import { isDefaultModel, viewedPlayer, setSetting, hiddenParts } from './export/players.js';
 import { pickCurrentKit, kitsAvailable } from './export/texture-lookup.js';
+import { savePlayerOf, skinToSave } from './export/save-team.js';
+import { inGameLook, hiddenInGame } from './export/in-game.js';
+import { keepSaveEdits } from './core/save.js';
 import { scene, boxLayer, boneLayer } from './scene/stage.js';
 import { buildGeometry, applyWeightScaling } from './scene/geometry.js';
 import { makeMaterial, clearAnimated, texturesNeeded } from './scene/materials.js';
 import { loadTexture, isDecoded } from './scene/textures.js';
 import { buildBoxes, buildBones } from './scene/overlays.js';
 import { frameModel, restoreCameraView } from './scene/framing.js';
-import { startRun, stopRun, running, applySkinWeights } from './animation/rig.js';
-import { renderTree, renderMaterials, renderKits, renderSkins, renderPlayerPanel, renderDefaultVersion, renderStats } from './ui/details.js';
+import { startRun, stopRun, rigged, wantRig, poseRun, applySkinWeights } from './animation/rig.js';
+import { renderTree, renderMaterials, renderKits, renderSkins, renderPlayerPanel, renderStats } from './ui/details.js';
+import { renderBodyPanel } from './ui/body-shape.js';
 import { forgetFiles } from './open/opening.js';
 
 // ---------------------------------------------------------------- loading models
@@ -37,14 +43,38 @@ export function clearModels() {
 /** Show nothing (keeping the panels in step). */
 export function showNoModels() {
   clearModels();
-  renderTree(); renderMaterials(); renderKits(); renderDefaultVersion(); applyVisibility();
+  renderTree(); renderMaterials(); renderKits(); applyVisibility();
 }
 
-/** Read and parse .fmdl files. Files deleted from disk since they were opened are forgotten. */
+/**
+ * Read and parse a Pre-Fox .model, with the materials from the .mtl its .xml assigns. Problems that still
+ * leave something to show are added to `problems`.
+ */
+async function readPreFoxModel(path, problems) {
+  const parsed = await parseModel(await readFile(path));
+  const listing = listedModels.get(path.toLowerCase());
+  let mtl = null;
+  if (!listing?.mtl) {
+    problems.push(listing && !listing.xml
+      ? `${fileOf(path)}: no hair.mtl or face.mtl next to it, so it has no materials`
+      : `${fileOf(path)}: its .xml assigns no .mtl, so it has no materials`);
+  }
+  else {
+    try { mtl = parseMtl(await readGameText(listing.mtl)); }
+    catch (e) { problems.push(`${fileOf(path)}: couldn't read ${fileOf(listing.mtl)}${isGone(e) || /is not open/.test(e.message) ? ' (not found)' : `: ${e.message}`}`); }
+  }
+  const uniform = listing?.type?.toLowerCase() === 'uniform';
+  const missing = attachMaterials(parsed, mtl, dirOf(listing?.mtl || path), { uniform });
+  if (mtl && missing.length) problems.push(`${fileOf(path)}: ${missing.join(', ')} not in ${fileOf(listing.mtl)}`);
+  if (parsed.warnings.length) problems.push(`${fileOf(path)} uses ${parsed.warnings.join(', ')}`);
+  return parsed;
+}
+
+/** Read and parse .fmdl and .model files. Files deleted from disk since they were opened are forgotten. */
 async function readModels(paths) {
   const loaded = [], problems = [], gone = [];
   for (const path of paths) {
-    try { loaded.push({ path, parsed: parseFmdl(await readFile(path)) }); }
+    try { loaded.push({ path, parsed: /\.model$/i.test(path) ? await readPreFoxModel(path, problems) : parseFmdl(await readFile(path)) }); }
     catch (e) {
       if (isGone(e)) gone.push(path);
       else problems.push(`Couldn't read ${fileOf(path)}: ${e.message}`);
@@ -64,6 +94,7 @@ function addModel({ path, parsed }, player) {
   const model = {
     label: isDefaultModel(path) ? `${fileOf(path)} (default)` : fileOf(path),
     path, ownDir: dirOf(path), player, parsed, group: new THREE.Group(), visible: !hidden.model, hidden,
+    kit: kitOfModel(path), // a kit-numbered model is only shown with its kit
   };
   for (const mesh of parsed.meshes) {
     const obj = new THREE.Mesh(buildGeometry(mesh), new THREE.MeshStandardMaterial({ color: 0xb9c4bd }));
@@ -81,13 +112,14 @@ function addModel({ path, parsed }, player) {
   state.models.push(model);
 }
 
-/** Replace what's shown with these .fmdl files (paths in the virtual file system). */
-export async function loadModels(paths, label, player = null) {
+/** Replace what's shown with these .fmdl / .model files (paths in the virtual file system), with notes to show. */
+export async function loadModels(paths, label, player = null, notes = []) {
   const { loaded, problems } = await readModels(paths);
+  problems.unshift(...notes);
   clearModels();
   for (const item of loaded) addModel(item, player);
   $('fileName').textContent = label;
-  if (options.run) await startRun();
+  if (wantRig()) await startRun();
   buildBoxes();
   buildBones();
   applyVisibility();
@@ -96,7 +128,7 @@ export async function loadModels(paths, label, player = null) {
   if (state.pendingRestore?.camera) restoreCameraView(state.pendingRestore.camera);
   else frameModel();
   renderPlayerPanel();
-  renderDefaultVersion();
+  renderBodyPanel();
   if (problems.length) showError(problems.join(' · '));
   else hideError();
   await refreshMaterials();
@@ -111,6 +143,7 @@ let refreshCount = 0;
 export async function refreshMaterials() {
   const refresh = ++refreshCount;
   pickCurrentKit();
+  applyVisibility(); // linked to the save, the kit's config and the skin color decide what of the default body shows
   renderKits();
   renderSkins();
   const needed = [...texturesNeeded(state.meshObjects)];
@@ -140,24 +173,42 @@ export function stepKit(direction) {
   selectKit(kits[(kits.indexOf(state.currentKit) + direction + kits.length) % kits.length]);
 }
 
-/** Skin colour for the viewed player (or for loose models). */
+/** Skin color for the viewed player (or for loose models). */
 export function selectSkin(n) {
-  const player = viewedPlayer();
-  if (player) setSetting(player, 'skin', n);
+  const player = viewedPlayer(), own = savePlayerOf(player);
+  if (own) {
+    skinToSave(own, n);
+    keepSaveEdits();
+  } else if (player) setSetting(player, 'skin', n);
   else state.looseSkin = n;
   refreshMaterials();
 }
 
 // ---------------------------------------------------------------- what's shown
 
-/** Show or hide meshes per the model tree and options, then update the counts. */
+let hiddenInGameBefore = '';
+
+/**
+ * Show or hide meshes per the model tree, the options and (linked to the save) the game, then update the counts.
+ * The tree is redrawn when what the game hides changes, as its boxes show that.
+ */
 export function applyVisibility() {
-  const animating = running();
+  const animating = rigged(), looks = new Map();
+  const lookOf = (model) => {
+    if (!isDefaultModel(model.path)) return null;
+    if (!looks.has(model.player)) looks.set(model.player, inGameLook(model.player));
+    return looks.get(model.player);
+  };
   for (const m of state.meshObjects) {
-    m.shown = m.model.visible && m.groupVisible && (options.hiddenMeshes || !m.obj.userData.hiddenByFile);
+    m.hiddenInGame = hiddenInGame(m.mesh, lookOf(m.model));
+    m.gameHides = m.hiddenInGame && !m.model.hidden.unhid.has(m.mesh.index);
+    m.shown = m.model.visible && m.groupVisible && !m.gameHides && (!m.model.kit || m.model.kit === state.currentKit)
+      && (options.hiddenMeshes || !m.obj.userData.hiddenByFile);
     m.obj.visible = m.shown && !(animating && m.skinned);
     if (m.skinned) m.skinned.visible = m.shown && animating;
   }
+  const hiddenNow = state.meshObjects.map((m) => (m.hiddenInGame ? 1 : 0)).join('');
+  if (hiddenNow !== hiddenInGameBefore) { hiddenInGameBefore = hiddenNow; renderTree(); }
   renderStats();
 }
 
@@ -171,13 +222,20 @@ export function applyWeightOption() {
   renderStats(); // scaled positions can move pieces apart or together
 }
 
+/** Build or drop the rig as the run animation and body shape need it. */
 export async function applyRunOption() {
-  if (options.run) await startRun();
+  if (wantRig()) await startRun();
   else { stopRun(); buildBones(); }
   applyVisibility();
 }
 
-/** Redraw what uses theme colours. */
+/** Show a changed body shape: on the rig if there is one, building or dropping the rig as needed. */
+export async function applyBodyShapeOption() {
+  if (rigged() && wantRig()) poseRun(0);
+  else await applyRunOption();
+}
+
+/** Redraw what uses theme colors. */
 export function applyTheme() {
   if (!state.models.length) return;
   buildBoxes();

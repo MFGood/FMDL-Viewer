@@ -19,7 +19,7 @@ async function startSevenZip(log) {
   try {
     return await SevenZip({ locateFile: () => wasmUrl, print: (s) => log.push(s), printErr: (s) => log.push(s) });
   } catch (err) {
-    throw new Error(`7-Zip couldn't start in this browser (${err && err.message ? err.message : err}).`);
+    throw new Error(`7-Zip couldn't start in the browser (${err && err.message ? err.message : err}).`);
   }
 }
 

@@ -14,16 +14,18 @@ import { initKeyboardCamera, updateKeyboardCamera } from './scene/keyboard-camer
 import { navigationScheme, setNavigationScheme, updateNavigation } from './scene/navigation.js';
 import { updateUvAnimations } from './scene/materials.js';
 import { followRig } from './scene/overlays.js';
-import { running, poseRun, currentRig } from './animation/rig.js';
+import { running, rigged, poseRun, currentRig } from './animation/rig.js';
 import {
   refreshMaterials, applyVisibility, applyWireframe, applyWeightOption, applyRunOption, applyTheme, stepKit,
 } from './viewer.js';
 import { renderTeam, playablePlayers, stepPlayer, reloadForDefaults } from './ui/team.js';
 import { renderPlayerPanel } from './ui/details.js';
+import { initSettings } from './ui/settings.js';
 import { openBatch, reload, canReload, openSample } from './open/opening.js';
 import { pickedBatch, droppedBatch } from './open/gather.js';
 
 initNotices();
+initSettings();
 makeGrid();
 
 // ---------------------------------------------------------------- display options
@@ -35,6 +37,7 @@ bindOptions({
   boundingBoxes: () => (boxLayer.visible = options.boundingBoxes),
   bones: () => (boneLayer.visible = options.bones),
   grid: () => showGrid(options.grid),
+  controlHints: () => applyHints(),
   hiddenMeshes: applyVisibility,
   frameStray: frameModel,
   weightScaling: applyWeightOption,
@@ -50,6 +53,9 @@ bindOptions({
     await reloadForDefaults();
   },
 });
+showGrid(options.grid); // as remembered (the grid was made before the options were read)
+function applyHints() { document.body.classList.toggle('no-hints', !options.controlHints); }
+applyHints();
 
 $('tPlayerDefaults').addEventListener('change', async () => {
   const player = viewedPlayer();
@@ -113,7 +119,7 @@ addEventListener('drop', (e) => {
 
 // ---------------------------------------------------------------- theme, size and drawing
 
-// Custom background colour, remembered in this browser. Picking a colour turns it on.
+// Custom background color, remembered in the browser. Picking a color turns it on.
 try {
   const saved = JSON.parse(localStorage.getItem('background') || 'null');
   if (saved) { $('tBg').checked = !!saved.on; $('bgColor').value = saved.color; }
@@ -139,7 +145,8 @@ function loop() {
   updateKeyboardCamera(dt);
   updateNavigation(dt);
   updateUvAnimations(now);
-  if (running()) { poseRun(now); followRig(currentRig()); }
+  if (running()) poseRun(now);
+  if (rigged()) followRig(currentRig());
   render();
   requestAnimationFrame(loop);
 }

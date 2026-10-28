@@ -13,7 +13,8 @@ export const options = {
   animateUv: true,       // UV scroll / UV step
   run: false,            // run animation
   grid: true,
-  frameStray: true,      // include stray meshes when framing the model
+  controlHints: true,    // key and mouse hints for players, kits and the view
+  frameStray: false,     // include stray meshes when framing the model
   hiddenMeshes: false,   // anti-blur and invisible meshes
   weightScaling: true,   // PES weight scaling
 };
@@ -28,18 +29,36 @@ const CHECKBOX_IDS = {
   animateUv: 'tAnim',
   run: 'tRun',
   grid: 'tGrid',
+  controlHints: 'tHints',
   frameStray: 'tStray',
   hiddenMeshes: 'tBlur',
   weightScaling: 'tWeight',
 };
 
-/** Read the checkboxes, and keep `options` in step with them. onChange[name]() runs after each change. */
+// The checkboxes as last set, remembered in the browser: { name: checked }.
+const STORAGE_KEY = 'displayOptions';
+
+function savedOptions() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}') || {}; } catch { return {}; }
+}
+
+function saveOptions() {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(options)); } catch {}
+}
+
+/**
+ * Set the checkboxes as they were last left in the browser, read them, and keep `options` in step with
+ * them. onChange[name]() runs after each change.
+ */
 export function bindOptions(onChange) {
+  const saved = savedOptions();
   for (const [name, id] of Object.entries(CHECKBOX_IDS)) {
     const input = $(id);
+    if (typeof saved[name] === 'boolean') input.checked = saved[name];
     options[name] = input.checked;
     input.addEventListener('change', () => {
       options[name] = input.checked;
+      saveOptions();
       onChange[name]?.();
     });
   }

@@ -4,14 +4,15 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>FMDL Viewer</title>
-  <meta name="description" content="View PES / Fox Engine .fmdl models and aesthetics exports in the browser.">
+  <meta name="description" content="View PES .fmdl (Fox Engine) and .model (PES 16 / 17) models and aesthetics exports in the browser.">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;700&family=Barlow:wght@400;500&family=JetBrains+Mono:wght@400&display=swap">
   <link rel="stylesheet" href="css/viewer.css">
   <script type="importmap">
   { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+    "idb": "https://cdn.jsdelivr.net/npm/idb@8.0.3/build/index.js"
   } }
   </script>
   <script type="module" src="js/main.js"></script>
@@ -20,10 +21,13 @@
 <header>
   <h1>FMDL<span>/</span>viewer</h1>
   <div class="file" id="fileName">sample.fmdl (example)</div>
-  <label class="btn primary" for="fileInput">Open files…<input id="fileInput" type="file" multiple accept=".fmdl,.dds,.ftex,.zip,.7z,.rar"></label>
+  <label class="btn primary" for="fileInput">Open files…<input id="fileInput" type="file" multiple accept=".fmdl,.model,.xml,.mtl,.dds,.ftex,.zip,.7z,.rar"></label>
   <label class="btn" for="folderInput">Open export folder…<input id="folderInput" type="file" webkitdirectory multiple></label>
   <button id="reload" type="button" disabled title="Re-read the files you opened (R)">Reload</button>
   <button id="resetView" type="button">Frame model</button>
+  <button id="settingsButton" type="button" class="icon" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settings">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.3 7.3 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .2.2.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
+  </button>
 </header>
 <main id="main">
   <aside id="team" hidden>
@@ -35,17 +39,24 @@
         <div class="team-meta" id="teamMeta"></div>
       </div>
     </div>
+    <form class="save-link" id="saveLink" hidden>
+      <p class="hint" id="saveLinkText"></p>
+      <div class="save-link-row" id="saveLinkRow">
+        <input type="text" id="saveTeamId" inputmode="numeric" placeholder="Team ID" autocomplete="off" spellcheck="false">
+        <button type="submit" class="btn">Use</button>
+      </div>
+    </form>
     <h2 class="roster-h">Players</h2>
-    <p class="hint roster-hint"><kbd>Ctrl</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> for the previous / next player</p>
+    <p class="hint roster-hint control-hint"><kbd>Ctrl</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> for the previous / next player</p>
     <div class="roster" id="roster"></div>
   </aside>
   <div id="stage">
-    <div id="drop" hidden>Drop an aesthetics export (.zip, .7z, .rar or folder)<br>or .fmdl / .dds / .ftex files</div>
+    <div id="drop" hidden>Drop an aesthetics export (.zip, .7z, .rar or folder)<br>or .fmdl / .dds / .ftex files, or .model files with their .xml and .mtl</div>
     <div id="notices">
       <div id="status" role="status" hidden></div>
       <div id="err" role="alert" hidden><span id="errText"></span><button type="button" id="errClose" aria-label="Dismiss">×</button></div>
     </div>
-    <div id="help"></div>
+    <div id="help" class="control-hint"></div>
   </div>
   <aside id="details">
     <section>
@@ -58,7 +69,7 @@
     <section id="kitSection" hidden>
       <h2>Kits</h2>
       <div class="kits" id="kits"></div>
-      <p class="hint"><kbd>Ctrl</kbd> + <kbd>←</kbd> / <kbd>→</kbd> for the previous / next kit</p>
+      <p class="hint control-hint"><kbd>Ctrl</kbd> + <kbd>←</kbd> / <kbd>→</kbd> for the previous / next kit</p>
     </section>
     <section id="playerSection" hidden>
       <h2>This player</h2>
@@ -67,19 +78,34 @@
       </div>
       <p class="hint" id="playerDefaultsNote"></p>
     </section>
-    <section id="defaultVersionSection" hidden>
-      <h2>Default models</h2>
-      <div class="kits" id="defaultVersions"></div>
+    <section id="bodySection" hidden>
+      <h2>Body shape</h2>
+      <div class="body-sliders" id="bodySliders"></div>
+      <p class="hint" id="bodyNote"></p>
     </section>
     <section id="skinSection" hidden>
-      <h2>Skin colour</h2>
+      <h2>Skin color</h2>
       <div class="kits" id="skins"></div>
     </section>
+    <section>
+      <h2>Models</h2>
+      <div class="tree" id="tree"></div>
+    </section>
+    <section>
+      <h2>Materials</h2>
+      <div id="mats"></div>
+      <p class="hint">Green dot: texture found. Amber: missing. Gray: not drawn by the viewer (normal and specular maps).</p>
+    </section>
+  </aside>
+  <div id="settings" role="dialog" aria-label="Settings" hidden>
+    <div class="settings-head">
+      <h2>Settings</h2>
+      <button type="button" id="settingsClose" aria-label="Close settings">×</button>
+    </div>
     <section>
       <h2>Display</h2>
       <div class="toggles">
         <label class="chk"><input type="checkbox" id="tTex" checked> Textures</label>
-        <label class="chk" title="Players in an export with no boots model get the default PES body (and hands, if they have no gloves). Players with their own boots can turn it on under This player."><input type="checkbox" id="tDefaults" checked> Auto-add default boots and hands</label>
         <label class="chk"><input type="checkbox" id="tWire"> Wireframe</label>
         <label class="chk"><input type="checkbox" id="tBack"> Back faces</label>
         <label class="chk"><input type="checkbox" id="tBox"> Bounding boxes</label>
@@ -87,14 +113,33 @@
         <label class="chk"><input type="checkbox" id="tAnim" checked> Animate UV scroll / step</label>
         <label class="chk" title="A simple run cycle on the full PES skeleton, to see how the model's weights deform."><input type="checkbox" id="tRun"> Run animation</label>
         <label class="chk"><input type="checkbox" id="tGrid" checked> Ground grid</label>
+        <label class="chk" title="The key and mouse hints for switching players and kits and for moving the view. The full list stays under Navigation."><input type="checkbox" id="tHints" checked> Control hints</label>
         <div class="chk-row">
           <label class="chk"><input type="checkbox" id="tBg"> Custom background</label>
-          <input type="color" id="bgColor" value="#808080" aria-label="Background colour" title="Background colour">
+          <input type="color" id="bgColor" value="#808080" aria-label="Background color" title="Background color">
         </div>
-        <label class="chk" title="Stray meshes are pieces of geometry well away from the rest of the model. They're always drawn; unticked, framing leaves them out."><input type="checkbox" id="tStray" checked> Frame stray meshes <span id="strayCount"></span></label>
+        <label class="chk" title="Stray meshes are pieces of geometry well away from the rest of the model. They're always drawn; unticked, framing leaves them out."><input type="checkbox" id="tStray"> Frame stray meshes <span id="strayCount"></span></label>
         <label class="chk"><input type="checkbox" id="tBlur"> Hidden meshes (anti-blur, invisible)</label>
         <label class="chk" title="As in PES, a vertex whose bone weights total less or more than 1 is pulled toward or pushed away from the origin; with no weight it sits at the origin."><input type="checkbox" id="tWeight" checked> PES weight scaling</label>
       </div>
+    </section>
+    <section>
+      <h2>Default models</h2>
+      <div class="toggles">
+        <label class="chk" title="Players in an export with no boots model get the default PES body (and hands, if they have no gloves). Players with their own boots can turn it on under This player."><input type="checkbox" id="tDefaults" checked> Auto-add default boots and hands</label>
+      </div>
+      <p class="hint settings-label">Fox players (.fmdl)</p>
+      <div class="kits" id="defaultVersionsFox"></div>
+      <p class="hint settings-label">Pre-Fox players (.model)</p>
+      <div class="kits" id="defaultVersionsPreFox"></div>
+    </section>
+    <section>
+      <h2>Save file</h2>
+      <div class="save-file">
+        <label class="btn" for="saveInput">Load save…<input id="saveInput" type="file"></label>
+        <button type="button" id="saveForget" hidden>Forget</button>
+      </div>
+      <p class="hint" id="saveInfo"></p>
     </section>
     <section>
       <h2>Navigation</h2>
@@ -106,16 +151,7 @@
         <kbd>.</kbd> frame model · <kbd>+</kbd> <kbd>−</kbd> zoom
       </p>
     </section>
-    <section>
-      <h2>Models</h2>
-      <div class="tree" id="tree"></div>
-    </section>
-    <section>
-      <h2>Materials</h2>
-      <div id="mats"></div>
-      <p class="hint">Green dot: texture found. Amber: missing. Grey: not drawn by the viewer (normal and specular maps).</p>
-    </section>
-  </aside>
+  </div>
 </main>
 </body>
 </html>

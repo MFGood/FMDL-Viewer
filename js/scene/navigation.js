@@ -24,7 +24,7 @@ const QUARTER = Math.PI / 2;
  * The view. The camera turns `yaw` about the vertical axis, then `pitch` about its own horizontal axis, and
  * sits `distance` back from `target`: yaw 0 / pitch 0 is the front view (from +Z), yaw 90° the right view
  * (from +X), pitch −90° the top view. Pitch isn't limited, so past ±90° the view is upside down. `roll` then
- * turns the camera about its line of sight (positive = anticlockwise as the camera sees it).
+ * turns the camera about its line of sight (positive = counterclockwise as the camera sees it).
  * `ortho` blends perspective (0) into orthographic (1); orthographic shows what perspective shows at the target.
  */
 export const view = { target: new THREE.Vector3(0, 1, 0), yaw: 0, pitch: 0, roll: 0, distance: 3, ortho: 0 };
@@ -99,7 +99,7 @@ export function pan(right, up) {
     .addScaledVector(new THREE.Vector3(0, 1, 0).applyQuaternion(q), up * height);
 }
 
-/** Turn the camera about its line of sight (positive = anticlockwise). */
+/** Turn the camera about its line of sight (positive = counterclockwise). */
 export function roll(angle) {
   view.roll = wrapAngle(view.roll + angle);
 }
@@ -190,7 +190,7 @@ function dragMode(e) {
   return e.button === 2 ? 'pan' : e.button === 1 ? 'dolly' : null;
 }
 
-const touchCentre = () => {
+const touchCenter = () => {
   const list = [...touches.values()], n = list.length;
   return { x: list.reduce((s, t) => s + t.x, 0) / n, y: list.reduce((s, t) => s + t.y, 0) / n, spread: n > 1 ? Math.hypot(list[0].x - list[1].x, list[0].y - list[1].y) : 0 };
 };
@@ -205,7 +205,7 @@ canvas.addEventListener('pointerdown', (e) => {
   if (e.pointerType === 'touch') {
     finishAnimation();
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    touchLast = touchCentre();
+    touchLast = touchCenter();
     canvas.setPointerCapture(e.pointerId);
     return;
   }
@@ -221,7 +221,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (e.pointerType === 'touch') {
     if (!touches.has(e.pointerId)) return;
     touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    const now = touchCentre();
+    const now = touchCenter();
     if (touches.size === 1) dragBy('orbit', now.x - touchLast.x, now.y - touchLast.y, true);
     else {
       if (touchLast.spread && now.spread) zoom(touchLast.spread / now.spread);
@@ -238,7 +238,7 @@ canvas.addEventListener('pointermove', (e) => {
 const endPointer = (e) => {
   if (e.pointerType === 'touch') {
     touches.delete(e.pointerId);
-    if (touches.size) touchLast = touchCentre();
+    if (touches.size) touchLast = touchCenter();
   } else if (drag && e.pointerId === drag.id) drag = null;
 };
 canvas.addEventListener('pointerup', endPointer);

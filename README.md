@@ -8,23 +8,28 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 ## Features
 
 - **Opening files:** load individual `.fmdl` models or an entire aesthetics export. Exports can be opened as a `.zip` without much trouble. Added `.rar` and `.7z` support but memory usage goes crazy once you drop one in. Opening a folder is the better way.
+- **Pre-Fox models (PES 16 / 17):** `.model` files are read too, with their `.xml` and `.mtl`. Exports are loaded the way the game and the 4cc AET compiler would load them, so folders without an `.xml`, `.common` links and kit-numbered models all work.
 - **Team view:** shows the team name and logo, and a player list with names and portraits taken from the Faces, Boots and Gloves folders. Each player's textures are matched to the right folders automatically.
 - **Reload:** press **R** to reload the export while keeping the current player, kit and camera, so you can preview changes as you make them.
 - **Materials:** shaders follow the Fox Engine materials, including unlit, glass, metallic, two-sided and transparent ones. UV scroll and UV step materials animate, including timing textures, so you get a quick preview of animation changes.
-- **Kits:** switch between outfield and GK kits (any `u0XXXp1` / `g1` / `dummy_kit` style texture). The kit you pick stays selected as you move between players.
-- **Default models:** players with only a face model are shown with a default PES boots model and gloves, from PES 17 or PES 21 (picked under Default models once they're shown). Skin color can be picked per player (`skin_color`, `thigh_bsm` and `arm_bsm` textures follow it; when they're found as named next to the model, they're offered as a 7th, custom color and picked by default), and the defaults can be turned off globally or per player. Players with their own boots model don't get the defaults unless they're turned on for that player.
-- **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. It drives the full PES skeleton. The helper bones (shorts panels, sleeves, shoulders, collar, elbows, wrists) are placed the way PES places them, using driver formulas ported from the game, so kits deform as they do in game.
+- **Kits:** switch between outfield and GK kits. The kit you pick stays selected as you move between players.
+- **Default models:** players with only a face model are shown with a default PES 17 or PES 21 body and hands. Skin color can be picked per player, including the player's own custom skin textures, and the defaults can be turned off globally or per player.
+- **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. The helper bones (shorts, sleeves, shoulders, collar…) move the way PES moves them, so kits deform as they do in game.
+- **Body shape:** PES's 14 physique settings as sliders, scaling the skeleton the way PES 2016 does.
+- **Settings:** the cog at the top right opens the global settings: display options, default models, a PES save file and navigation. They're remembered in the browser between visits.
+- **Save files:** load a PES 15–21 save under Save file in the settings; it's kept in the browser. An open export is matched to its team in the save, and its players then use their names, body shapes and skin colors from the save (edits are written back to the copy kept in the browser). The default body also shows and hides pieces the way the game does for FPC setups. A PES 15–17 save goes with Pre-Fox exports and a PES 18–21 save with Fox ones.
 - **Display options:**
   - Draw backfaces toggle
   - Bone overlay
   - Ground grid centered on the origin
+  - Control hints for players, kits and the view, which can be hidden
   - PES-style weight scaling (vertices whose weights don't add up to 1 get scaled towards or away from origin)
   - Option to frame stray meshes within the viewport (useful for catching bits floating above/below the pitch)
 - **Controls:**
   - **Mouse (Blender, the default):** middle-drag orbits, Shift+middle-drag pans, Ctrl+middle-drag
     (down = in) or the wheel zooms. Ctrl+wheel pans right / left, Shift+wheel pans up / down, and
     Ctrl+Shift+wheel rolls the view 15° (up = clockwise).
-  - **Mouse (Classic, picked under Navigation):** left-drag orbits, right-drag or Shift+left-drag pans,
+  - **Mouse (Classic, picked under Navigation in the settings):** left-drag orbits, right-drag or Shift+left-drag pans,
     the wheel or middle-drag zooms.
   - **View keys (numpad or number row):** **1** / **Ctrl+1** front / back, **3** / **Ctrl+3** right / left,
     **7** / **Ctrl+7** top / bottom, **5** perspective / orthographic, **9** turn 180° (top ↔ bottom from
@@ -58,14 +63,20 @@ js/
     files.js               virtual file system: every open file under a path, read on demand
     notices.js             status line and error box
     options.js             the Display checkboxes as an `options` object
-    state.js               what's being shown right now (models, export, player, kit)
+    state.js               what's being shown right now (models, export, player, kit, save file)
+    save.js                the PES save file loaded in the settings, kept in IndexedDB
   formats/
     fmdl.js                .fmdl model parser (port of pes-fmdl-blender's FmdlFile.py)
+    model.js               Pre-Fox .model parser (port of pes-model-blender's ModelFile.py)
+    mtl.js                 Pre-Fox .xml model lists and .mtl materials
     texture-files.js       .ftex / .dds readers (Ftex.py port)
     block-decode.js        DXT / BC4 / BC5 / BC7 decoding to RGBA
     aet.js                 aesthetics export layout: players, kits, texture lookup rules
+    pes_save.js            PES 15–21 save files (EDIT.bin / EDIT00000000): read and write players and teams
   export/
-    players.js             per-player rules: default models, skin colour, roster names
+    players.js             per-player rules: default models, skin color, roster names
+    save-team.js           the open export's team in the save file, and its players there
+    in-game.js             what the game shows of the default body for a player linked to the save (kit configs, FPC rules)
     texture-lookup.js      which file a texture reference resolves to; kit choice
   scene/
     stage.js               three.js renderer, scene, camera, lights, grid
@@ -80,10 +91,13 @@ js/
     quat.js                vector / quaternion helpers
     run-cycle.js           procedural run cycle on the PES skeleton
     helper-bones.js        PES's helper-bone drivers (shorts, sleeves, shoulders, collar…), ported from the game
-    rig.js                 skinned copies of the meshes, driven by the run cycle
+    body-shape.js          PES's physique settings as per-bone scales, from the game's tables
+    rig.js                 skinned copies of the meshes, driven by the run cycle and body shape
   ui/
-    details.js             right-hand panel: counts, kits, skin colour, model tree, materials
+    details.js             right-hand panel: counts, kits, skin color, model tree, materials
     team.js                left-hand panel: team, players, switching players
+    settings.js            settings panel (cog button): display options, default models, navigation
+    body-shape.js          the Body shape sliders
   open/
     gather.js              what was dropped or picked, as files
     archives.js            .zip (JSZip) and .7z / .rar (7-Zip) reading
@@ -91,7 +105,7 @@ js/
 workers/sevenzip-worker.js 7-Zip extraction, off the main thread
 vendor/7zip/               7-Zip compiled to WebAssembly (loaded only for .7z / .rar)
 assets/
-  pes-skeleton.json        full PES skeleton (loaded when the run animation is first turned on)
+  pes-skeleton.json        full PES skeleton (loaded when the run animation or a body shape is first turned on)
   pes-bind-frames.json     bind orientations of the PES bones, for the helper-bone drivers
   defaults/                default body, hands and skin textures (loaded when a player needs them)
   sample/                  the example model shown at start-up
@@ -102,9 +116,10 @@ assets/
 - [three.js](https://threejs.org) 0.160 (MIT), loaded from jsDelivr.
 - [JSZip](https://stuk.github.io/jszip/) 3.10 (MIT), loaded from cdnjs the first time a .zip is opened.
 - 7-Zip 24.09 via [7z-wasm](https://github.com/use-strict/7z-wasm) (LGPL; RAR decoding under the unRAR
-  licence restriction), in `vendor/7zip/`.
+  license restriction), in `vendor/7zip/`.
 - The model and texture parsing and the PES skeleton data are ported from
   [pes-fmdl-blender](https://github.com/the4chancup/pes-fmdl-blender) by the4chancup; see that
-  repository for its licence.
-- Shader behaviour follows the Fox Engine section of the
+  repository for its license. The `.model` parsing is ported from
+  [pes-model-blender](https://github.com/the4chancup/pes-model-blender), also by the4chancup.
+- Shader behavior follows the Fox Engine section of the
   [implyingrigged.info Materials wiki](https://implyingrigged.info/wiki/Materials).

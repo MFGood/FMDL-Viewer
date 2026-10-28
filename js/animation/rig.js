@@ -1,5 +1,6 @@
-// rig.js — plays the run cycle on the loaded models. Each mesh with bone weights gets a skinned copy bound
-// to a rig of the full PES skeleton; the copies are shown instead of the rigid meshes while it runs.
+// rig.js — plays the run cycle and shows the body shape on the loaded models. Each mesh with bone weights
+// gets a skinned copy bound to a rig of the full PES skeleton; the copies are shown instead of the rigid
+// meshes while the run animation is on or a body shape is set (standing at rest if it isn't running).
 
 import * as THREE from 'three';
 import { fetchAsset } from '../core/files.js';
@@ -8,6 +9,7 @@ import { state } from '../core/state.js';
 import { scene } from '../scene/stage.js';
 import { runPose } from './run-cycle.js';
 import { helperBoneMatrices } from './helper-bones.js';
+import { currentShape, applyBodyShape, shoulderHeightOf } from './body-shape.js';
 
 // The full PES skeleton (158 bones, root dsk_hip) from pes-fmdl-blender's PesSkeletonData.py, which took
 // the positions from PES's body / hand_l / hand_r / face .skl files: { name: { parent, pos: [x, y, z] } }.
@@ -26,6 +28,12 @@ function loadSkeleton() {
 /** { root, bones: Map name -> Bone, staticBone, index: Map Bone -> i, skeleton, rest: Map Bone -> position } */
 let rig = null;
 export const currentRig = () => rig;
+
+/** Whether the loaded models need the rig: the run animation is on, or a body shape is set. */
+export const wantRig = () => options.run || !!currentShape();
+
+/** True while the rig is built and its skinned copies are shown. */
+export const rigged = () => !!rig;
 
 /** True while the run animation is on and a rig is built. */
 export const running = () => options.run && !!rig;
@@ -69,6 +77,7 @@ function buildRig() {
   for (const model of state.models) for (const bone of model.parsed.bones) addModelBone(bone);
   scene.add(root);
   root.updateMatrixWorld(true);
+  const depth = (b) => (b.parent?.isBone ? 1 + depth(b.parent) : 0);
   const restWorld = new Map(Object.entries(skeleton).map(([name, d]) => [name, d.pos]));
   // Helper bones move by how far the game's placement has moved from its placement at rest.
   const helperRest = new Map([...helperBoneMatrices(bones, bindFrames, restWorld)].map(([name, m]) => {
@@ -79,6 +88,7 @@ function buildRig() {
     root, bones, staticBone,
     restWorld, helperRest,
     index: new Map(list.map((b, i) => [b, i])),
+    order: [...list].sort((a, b) => depth(a) - depth(b)), // parents before children
     skeleton: new THREE.Skeleton(list), // rest pose = these positions, identity rotations
     rest: new Map(list.map((b) => [b, b.position.clone()])),
   };
@@ -91,7 +101,7 @@ function disposeRig() {
   rig = null;
 }
 
-/** A skinned copy of a mesh: same attributes and material, positions as modelled, bone weights added. */
+/** A skinned copy of a mesh: same attributes and material, positions as modeled, bone weights added. */
 function makeSkinned(m) {
   const v = m.mesh.vertices;
   if (!v.weightSum) return null; // no bone weights in this mesh's vertex format: it stays rigid
@@ -103,7 +113,7 @@ function makeSkinned(m) {
   geometry.setIndex(source.index);
   geometry.setAttribute('position', new THREE.BufferAttribute(v.position, 3));
 
-  const n = v.count, indices = new Uint16Array(n * 4), raw = new Float32Array(n * 4), normalised = new Float32Array(n * 4);
+  const n = v.count, indices = new Uint16Array(n * 4), raw = new Float32Array(n * 4), normalized = new Float32Array(n * 4);
   const staticIndex = rig.index.get(rig.staticBone);
   for (let i = 0; i < n; i++) {
     let valid = 0;
@@ -118,13 +128,13 @@ function makeSkinned(m) {
     const lost = v.weightSum[i] - valid;
     if (lost > 1e-6) for (let k = 0; k < 4; k++) if (!raw[i * 4 + k]) { indices[i * 4 + k] = staticIndex; raw[i * 4 + k] = lost; break; }
     const sum = raw[i * 4] + raw[i * 4 + 1] + raw[i * 4 + 2] + raw[i * 4 + 3];
-    if (sum > 0) for (let k = 0; k < 4; k++) normalised[i * 4 + k] = raw[i * 4 + k] / sum;
-    else { indices[i * 4] = staticIndex; normalised[i * 4] = 1; } // unweighted: stays put when weight scaling is off
+    if (sum > 0) for (let k = 0; k < 4; k++) normalized[i * 4 + k] = raw[i * 4 + k] / sum;
+    else { indices[i * 4] = staticIndex; normalized[i * 4] = 1; } // unweighted: stays put when weight scaling is off
   }
   geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(indices, 4));
-  // Raw weights reproduce PES weight scaling (Σ wᵢ·Mᵢ·p, so at rest Σw·p); normalised ones don't.
-  geometry.setAttribute('skinWeight', new THREE.BufferAttribute(options.weightScaling ? raw : normalised, 4));
-  geometry.userData.weights = { raw, normalised };
+  // Raw weights reproduce PES weight scaling (Σ wᵢ·Mᵢ·p, so at rest Σw·p); normalized ones don't.
+  geometry.setAttribute('skinWeight', new THREE.BufferAttribute(options.weightScaling ? raw : normalized, 4));
+  geometry.userData.weights = { raw, normalized };
 
   const skinned = new THREE.SkinnedMesh(geometry, m.obj.material);
   skinned.bind(rig.skeleton, new THREE.Matrix4());
@@ -135,13 +145,14 @@ function makeSkinned(m) {
   return skinned;
 }
 
-/** Build the rig and skinned copies for the loaded models. */
+/** Build the rig and skinned copies for the loaded models, if they need them (see wantRig). */
 export async function startRun() {
   await loadSkeleton();
   stopRun();
-  if (!state.models.length || !options.run) return;
+  if (!state.models.length || !wantRig()) return;
   buildRig();
   for (const m of state.meshObjects) m.skinned = makeSkinned(m);
+  poseRun(0);
 }
 
 /** Remove the rig and skinned copies. */
@@ -155,33 +166,40 @@ export function stopRun() {
   disposeRig();
 }
 
-/** Switch the skinned copies between raw (PES weight scaling) and normalised weights. */
+/** Switch the skinned copies between raw (PES weight scaling) and normalized weights. */
 export function applySkinWeights() {
   for (const m of state.meshObjects) {
     if (!m.skinned) continue;
-    const { raw, normalised } = m.skinned.geometry.userData.weights;
-    const wanted = options.weightScaling ? raw : normalised;
+    const { raw, normalized } = m.skinned.geometry.userData.weights;
+    const wanted = options.weightScaling ? raw : normalized;
     if (m.skinned.geometry.getAttribute('skinWeight').array !== wanted) m.skinned.geometry.setAttribute('skinWeight', new THREE.BufferAttribute(wanted, 4));
   }
 }
 
-/** Pose the rig at time t (seconds). */
+/** Pose the rig at time t (seconds), or at rest while the run animation is off; then give it the body shape. */
 export function poseRun(t) {
-  const { local, hipOffset } = runPose(t, skeleton);
-  for (const [name, q] of local) rig.bones.get(name)?.quaternion.set(q[0], q[1], q[2], q[3]);
-  const hip = rig.bones.get('dsk_hip');
-  if (hip) hip.position.copy(rig.rest.get(hip)).add(new THREE.Vector3(...hipOffset));
+  for (const bone of rig.order) bone.matrixAutoUpdate = true; // the shape and helpers of the last pose go
+  if (options.run) {
+    const { local, hipOffset } = runPose(t, skeleton);
+    for (const [name, q] of local) rig.bones.get(name)?.quaternion.set(q[0], q[1], q[2], q[3]);
+    const hip = rig.bones.get('dsk_hip');
+    if (hip) hip.position.copy(rig.rest.get(hip)).add(new THREE.Vector3(...hipOffset));
+  } else {
+    for (const bone of rig.order) { bone.quaternion.identity(); bone.position.copy(rig.rest.get(bone)); }
+  }
   rig.root.updateMatrixWorld(true);
   // Then the helper bones, as PES places them: each moves as the game's placement moves from rest (which
   // may scale it unevenly), set as a fixed local matrix under its parent; parents are done before children.
-  const helpers = helperBoneMatrices(rig.bones, bindFrames, rig.restWorld);
+  const shape = currentShape();
+  const helpers = helperBoneMatrices(rig.bones, bindFrames, rig.restWorld, shape ? shoulderHeightOf(shape) : 0);
   for (const [name, m] of helpers) m.multiply(rig.helperRest.get(name));
-  const depth = (b) => (b.parent?.isBone ? 1 + depth(b.parent) : 0);
   const inverse = new THREE.Matrix4();
-  for (const [name, world] of [...helpers].sort(([a], [b]) => depth(rig.bones.get(a)) - depth(rig.bones.get(b)))) {
-    const bone = rig.bones.get(name);
+  for (const bone of rig.order) {
+    const world = helpers.get(bone.name);
+    if (!world) continue;
     bone.matrixAutoUpdate = false;
     bone.matrix.copy(inverse.copy(bone.parent.matrixWorld).invert().multiply(world));
     bone.updateMatrixWorld(true);
   }
+  if (shape) applyBodyShape(rig.order, bindFrames, shape);
 }

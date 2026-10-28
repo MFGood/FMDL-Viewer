@@ -197,17 +197,21 @@ const DRIVERS = [
 ].flatMap(([target, ...rest]) => (target.includes('{s}') ? ['l', 'r'] : [''])
   .map((side) => ({ side, target: target.replace('{s}', side), handler: rest[2], names: [rest[0], rest[1], rest[3], rest[4]].map((n) => n?.replace('{s}', side)) })));
 
+/** The bone each driven helper follows: Map helper -> source. */
+export const HELPER_SOURCES = new Map(DRIVERS.map(({ target, names: [source] }) => [target, source]));
+
 const _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
 const toQ = (q) => _q.set(q[0], q[1], q[2], q[3]);
 const trs = (p, q, s = [1, 1, 1]) => new THREE.Matrix4().compose(_v.set(p[0], p[1], p[2]), toQ(q), _s.set(s[0], s[1], s[2]));
 
 /**
  * The game's world matrices for the helper bones it drives, for the posed rig (its world matrices up to
- * date). `bind`: bone -> bind rotation, `rest`: bone -> rest world position. Returns Map name -> THREE.Matrix4.
+ * date). `bind`: bone -> bind rotation, `rest`: bone -> rest world position, `shoulderHeight`: the body shape's
+ * shoulder height (−1…+1), which the game passes to the collarbone and collar drivers. Returns Map name -> THREE.Matrix4.
  * At the bind pose these aren't quite the bind transforms (the formulas' neutral points sit a little off it,
  * and the collarbone takes the chest's orientation), so callers measure poses against the result at rest.
  */
-export function helperBoneMatrices(bones, bind, rest) {
+export function helperBoneMatrices(bones, bind, rest, shoulderHeight = 0) {
   const pose = new Map(); // game world: { q, p, m }
   const viewer = (name) => {
     if (name === 'sk_root_hip') name = 'dsk_hip';
@@ -250,7 +254,19 @@ export function helperBoneMatrices(bones, bind, rest) {
     const res = handler(side, a, joint(extra1) ?? { a: [0, 0, 0], q: ID }, joint(extra2) ?? { a: [0, 0, 0], q: ID }, d);
     const T = res.T ?? (res.dT ? T0.map((v, i) => v + res.dT[i]) : T0);
     const base = res.base ? trs(src.p, res.base) : src.m;
-    const m = base.clone().multiply(trs(T, res.R ?? R0, res.S));
+    let R = res.R ?? R0;
+    const m = base.clone();
+    if (shoulderHeight && target.startsWith('dsk_clavicle')) {
+      // The body shape's shoulder height turns the collarbone up or down, about its own bind y (forward).
+      const lift = qY(rad(8 * shoulderHeight * (side === 'l' ? 1 : -1)));
+      R = qMul(qMul(qMul(R0, lift), qInv(R0)), R);
+    }
+    m.multiply(trs(T, R, res.S));
+    if (shoulderHeight && target.startsWith('dsk_collar')) {
+      // …and moves the collar out or in along its own z.
+      const out = (shoulderHeight < 0 ? 0.005 : 0.01) * shoulderHeight * (side === 'l' ? 1 : -1);
+      m.multiply(new THREE.Matrix4().makeTranslation(0, 0, out));
+    }
     m.decompose(_v, _q, _s);
     pose.set(target, { q: [_q.x, _q.y, _q.z, _q.w], p: _v.toArray(), m });
     if (res.write) written.set(target, res.write);

@@ -3,7 +3,7 @@
 // decodeToRGBA from block-decode.js.
 
 
-async function inflate(bytes) {
+export async function inflate(bytes) {
   const ds = new DecompressionStream('deflate'); // zlib-wrapped, matching Python's zlib.decompress
   const stream = new Blob([bytes]).stream().pipeThrough(ds);
   return new Uint8Array(await new Response(stream).arrayBuffer());

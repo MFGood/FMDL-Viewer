@@ -26,7 +26,7 @@ function turnTo(yaw, pitch) {
   animateTo(to);
 }
 
-/** Orbit over the top by `angle`, first moving the target level with the middle of the model so it stays centred. */
+/** Orbit over the top by `angle`, first moving the target level with the middle of the model so it stays centered. */
 function orbitOver(angle) {
   finishAnimation();
   const center = framedCenter();
