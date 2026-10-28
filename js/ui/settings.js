@@ -77,13 +77,20 @@ function initSave() {
     input.value = '';  // so picking the same file again still loads it
     if (file) loadSave(file);
   });
-  // Where the browser can, pick the save with a file handle instead, so Export can open in its folder
+  // Where the browser can, pick the save with a file handle instead, so Export can open in its folder. Some
+  // won't read the handle they give (the Claude app's browser pane), so then it's the plain file input.
+  let handlesWork = true;
   input.closest('label').addEventListener('click', async (e) => {
-    if (!window.showOpenFilePicker) return;
+    if (!window.showOpenFilePicker || !handlesWork) return;
     e.preventDefault();
-    let handle;
+    let handle, file;
     try { [handle] = await showOpenFilePicker(); } catch { return; }  // cancelled
-    loadSave(await handle.getFile(), handle);
+    try { file = await handle.getFile(); } catch {
+      handlesWork = false;
+      input.click();
+      return;
+    }
+    loadSave(file, handle);
   });
 
   $('saveExport').addEventListener('click', async () => {

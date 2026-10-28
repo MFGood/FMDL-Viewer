@@ -213,7 +213,12 @@ export async function openBatch(batch) {
   } else openBatches.push(batch);
   $('reload').disabled = false;
   if (reopening) flashStatus('Same files as before: kept your player, kit and view');
+  if (batch.drop?.snapshot) showError(SNAPSHOT_NOTE);
 }
+
+// Where the browser won't let the viewer read dropped files again (the Claude app's browser pane), it keeps the
+// copies the drop handed over.
+const SNAPSHOT_NOTE = "The browser didn't let the viewer keep access to the dropped files, so Reload (R) won't pick up changes to them. Drop them again after changing them.";
 
 /** Picked files that changed on disk can't be re-read in Chrome: check before tearing anything down. */
 async function checkReadable(batch) {

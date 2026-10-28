@@ -1,7 +1,9 @@
 // gather.js — turning what was dropped or picked into a list of files.
 //
 // Everything opened is a "batch": what one drop or one pick handed over.
-//   { label, drop: { handles, entries } }  dropped items, which can be read again (the browser keeps access)
+//   { label, drop: { handles, entries, files } }  dropped items, which can be read again (the browser keeps
+//                                            access); files is what the drop event held, a last resort
+//                                            (snapshot: true once it's been used)
 //   { label, picked: [{ path, file }] }      files from the Open buttons (Chrome refuses to re-read these
 //                                            once they change on disk)
 
@@ -27,14 +29,31 @@ async function filesFromHandle(handle, prefix, out) {
   else for await (const child of handle.values()) await filesFromHandle(child, `${prefix}${handle.name}/`, out);
 }
 
-/** The batch's files as they are now: [{ path, file }], where path is null for a file on its own. */
+/**
+ * The batch's files as they are now: [{ path, file }], where path is null for a file on its own. Some browsers
+ * hand over handles they then won't read (the Claude app's browser pane: getFile isn't allowed there), so a
+ * drop falls back to its entries, remembering the handles are no use, and then to the files the drop event
+ * held (a snapshot, so Reload won't see later changes to them).
+ */
 export async function batchFiles(batch) {
   if (batch.picked) return batch.picked;
-  const { handles, entries } = batch.drop;
-  const hasFolder = (handles || entries).some((x) => x.kind === 'directory' || x.isDirectory);
-  const out = [];
-  if (handles) for (const handle of handles) await filesFromHandle(handle, '', out);
-  else for (const entry of entries) await filesFromEntry(entry, out);
+  const { drop } = batch;
+  const hasFolder = (drop.handles || drop.entries).some((x) => x.kind === 'directory' || x.isDirectory);
+  const read = async (from) => { const out = []; await from(out); return out; };
+  let out = null, problem = null;
+  if (drop.handles) {
+    try { out = await read(async (o) => { for (const handle of drop.handles) await filesFromHandle(handle, '', o); }); }
+    catch (e) { problem = e; drop.handles = null; }
+  }
+  if (!out && drop.entries.length) {
+    try { out = await read(async (o) => { for (const entry of drop.entries) await filesFromEntry(entry, o); }); }
+    catch (e) { problem = e; }
+  }
+  if (!out && drop.files?.length && !hasFolder) {
+    drop.snapshot = true; // what Reload reads too, so it won't see changes (see openBatch)
+    return drop.files.map((file) => ({ path: null, file }));
+  }
+  if (!out) throw problem || new Error('nothing to read');
   return hasFolder ? out : out.map(({ file }) => ({ path: null, file }));
 }
 
@@ -55,7 +74,7 @@ export function droppedBatch(dataTransfer) {
   const handlePromises = items.map((i) => i.getAsFileSystemHandle?.() ?? null);
   const entries = items.map((i) => i.webkitGetAsEntry?.()).filter(Boolean);
   const label = entries.find((e) => e.isDirectory)?.name || entries.map((e) => e.name).join(', ');
-  const fallback = pickedBatch(dataTransfer.files);
+  const fallback = pickedBatch(dataTransfer.files), files = [...(dataTransfer.files || [])];
   return (async () => {
     let handles = null;
     if (handlePromises.length && handlePromises.every(Boolean)) {
@@ -65,7 +84,7 @@ export function droppedBatch(dataTransfer) {
       } catch { handles = null; } // not allowed here: fall back to entries
     }
     if (!handles && !entries.length) return fallback;
-    return { label, drop: { handles, entries } };
+    return { label, drop: { handles, entries, files } };
   })();
 }
 
