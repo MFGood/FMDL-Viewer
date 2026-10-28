@@ -19,7 +19,10 @@ export const state = {
   looseShape: null,
   /** The PES save loaded in the settings: { name, parsed } with parsed a SaveFile, or null. */
   save: null,
-  /** The open export's team in the save: { team }, { unmatched, ambiguous } until a team ID is given, or null. */
+  /**
+   * The open export's team in the save: { team }, { unmatched, ambiguous } until a team ID is given,
+   * { wrongVersion } when the save is for the other generation of PES than the export (Pre-Fox or Fox), or null.
+   */
   saveLink: null,
   /** While a reload is reopening things: { player, kit, camera } to put back. */
   pendingRestore: null,

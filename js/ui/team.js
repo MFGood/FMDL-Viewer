@@ -11,7 +11,7 @@ import { modelsFor, playerTitle, playerSummary, viewedPlayer, twoDigits } from '
 import { loadModels, showNoModels } from '../viewer.js';
 import { renderPlayerPanel } from './details.js';
 import { renderBodyPanel } from './body-shape.js';
-import { linkSaveTeam, useTeamId } from '../export/save-team.js';
+import { linkSaveTeam, useTeamId, preFoxSave } from '../export/save-team.js';
 import { applyBodyShapeOption, refreshMaterials } from '../viewer.js';
 import { captureView } from '../open/opening.js';
 
@@ -83,6 +83,13 @@ function renderSaveLink() {
   if (!link) return;
   const text = $('saveLinkText');
   text.textContent = '';
+  if (link.wrongVersion) {
+    $('saveLinkRow').hidden = true;
+    text.textContent = preFoxSave()
+      ? `${state.save.name} is a PES ${state.save.parsed.pes} save, for Pre-Fox (.model) players, but this export's players are Fox (.fmdl) models. Load a PES 18–21 save in the settings to use its players.`
+      : `${state.save.name} is a PES ${state.save.parsed.pes} save, for Fox (.fmdl) players, but this export's players are Pre-Fox (.model) models. Load a PES 15–17 save in the settings to use its players.`;
+    return;
+  }
   const asking = link.unmatched || changingTeam;
   $('saveLinkRow').hidden = !asking;
   if (link.team && !changingTeam) {

@@ -17,13 +17,26 @@ const namedTeams = () => Object.values(state.save?.parsed.teams || {}).filter((t
 /** The save's team with this ID, or null. */
 export const saveTeam = (id) => namedTeams().find((team) => String(team.id) === String(id).trim()) || null;
 
+/** PES 15–17 saves go with Pre-Fox (.model) exports, PES 18–21 saves with Fox (.fmdl) ones. */
+export const preFoxSave = () => parseInt(state.save.parsed.pes) < 18;
+
+/** Whether the open export's player models are Pre-Fox (true), Fox (false), or neither or both (null). */
+function preFoxExport() {
+  const models = (state.aet?.players || []).flatMap((p) => p.fmdls);
+  const preFox = models.some((p) => /\.model$/i.test(p)), fox = models.some((p) => /\.fmdl$/i.test(p));
+  return preFox === fox ? null : preFox;
+}
+
 /**
  * Link the open export with a team in the save: { team } when found, { unmatched: true } when the user needs
- * to give a team ID, null without both an export and a save. Sets state.saveLink and the players' names.
+ * to give a team ID, { wrongVersion: true } when the save is for the other generation of PES (Pre-Fox or Fox)
+ * than the export's models, null without both an export and a save. Sets state.saveLink and the players' names.
  */
 export function linkSaveTeam() {
   const { aet, save } = state;
   if (!aet || !save) return setLink(null);
+  const preFox = preFoxExport();
+  if (preFox != null && preFox !== preFoxSave()) return setLink({ wrongVersion: true });
   const name = norm(aet.teamName);
   const byName = name ? namedTeams().filter((team) => norm(team.name) === name || norm(team.short_name) === name) : [];
   if (byName.length === 1) return setLink({ team: byName[0] });

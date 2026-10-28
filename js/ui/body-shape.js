@@ -32,6 +32,7 @@ function sourceNote() {
   if (!player) return '';
   const own = savePlayerOf(player);
   if (own) return `${plainName(own.name)} (ID ${own.id}) in ${state.save.name}: changes are made to the save kept in this browser. `;
+  if (link?.wrongVersion) return 'The save file is for another version of PES (see under the team name), so kept in this browser only. ';
   if (link?.unmatched) return 'Give the team ID under the team name to use the save file\'s players. ';
   if (link?.team) return `Not on ${link.team.name} in the save file, so kept in this browser only. `;
   return state.save ? '' : 'Load a save file in the settings to use the players\' own shapes. ';
