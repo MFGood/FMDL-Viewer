@@ -16,7 +16,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Default models:** players with only a face model are shown with a default PES 17 or PES 21 body and hands. Skin color can be picked per player, including the player's own custom skin textures, and the defaults can be turned off globally or per player.
 - **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. The helper bones (shorts, sleeves, shoulders, collar…) move the way PES moves them, so kits deform as they do in game.
 - **Body shape:** PES's 14 physique settings as sliders, scaling the skeleton the way PES 2016 does.
-- **Face editor:** Pre-Fox players without a face model of their own get PES 16's editable face, with its eyes, mouth, neck and head. With Edited face on (`b_edit_face` in the save), the face editor frames the face and turns the details pane into the game's face sliders, shaping the face, eyes and mouth the way PES 2016 does.
+- **Face editor:** Pre-Fox players without a face model of their own get PES 16's editable face, with its eyes, mouth, neck and head, and the edit hair their save settings pick when their face folder has no hair. With Edited face on (`b_edit_face` in the save), the face editor frames the face and turns the details pane into the game's face sliders, shaping the face, eyes and mouth the way PES 2016 does.
 - **Settings:** the cog at the top right opens the global settings: display options, default models, a PES save file and navigation. They're remembered in the browser between visits.
 - **Save files:** load a PES 15–21 save under Save file in the settings, or drop it on the window (a file without an extension is tried as a save first); it's kept in the browser. An open export is matched to its team in the save, and its players then use their names, body shapes and skin colors from the save (edits are written back to the copy kept in the browser, and **Export** downloads it). The default body also shows and hides pieces the way the game does for FPC setups. A PES 15–17 save goes with Pre-Fox exports and a PES 18–21 save with Fox ones.
 - **Display options:**
@@ -80,6 +80,7 @@ js/
     save-team.js           the open export's team in the save file, and its players there
     in-game.js             what the game shows of the default body for a player linked to the save (kit configs, FPC rules)
     texture-lookup.js      which file a texture reference resolves to; kit choice
+    edit-hair.js           PES 16's edit hair: the style and textures a player's save settings name
   scene/
     stage.js               three.js renderer, scene, camera, lights, grid
     geometry.js            mesh geometry and PES weight scaling
@@ -111,7 +112,7 @@ vendor/7zip/               7-Zip compiled to WebAssembly (loaded only for .7z / 
 assets/
   pes-skeleton.json        full PES skeleton (loaded when the run animation or a body shape is first turned on)
   pes-bind-frames.json     bind orientations of the PES bones, for the helper-bone drivers
-  defaults/                default body, hands, editable face and skin textures (loaded when a player needs them)
+  defaults/                default body, hands, editable face, edit hair and skin textures (loaded when needed)
   sample/                  the example model shown at start-up
 research/face-sliders/     a check page for the face sliders, and the scripts that read them out of PES 2016
 ```

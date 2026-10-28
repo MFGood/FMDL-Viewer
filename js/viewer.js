@@ -11,7 +11,8 @@ import { parseFmdl } from './formats/fmdl.js';
 import { parseModel } from './formats/model.js';
 import { parseMtl, attachMaterials } from './formats/mtl.js';
 import { dirOf, fileOf } from './formats/aet.js';
-import { isDefaultModel, viewedPlayer, setSetting, hiddenParts } from './export/players.js';
+import { isDefaultModel, viewedPlayer, setSetting, hiddenParts, hairFor, DEFAULTS } from './export/players.js';
+import { hairStyleOf, dressEditHair } from './export/edit-hair.js';
 import { pickCurrentKit, kitsAvailable } from './export/texture-lookup.js';
 import { savePlayerOf, skinToSave } from './export/save-team.js';
 import { inGameLook, hiddenInGame } from './export/in-game.js';
@@ -120,7 +121,12 @@ export async function loadModels(paths, label, player = null, notes = []) {
   const { loaded, problems } = await readModels(paths);
   problems.unshift(...notes);
   clearModels();
-  for (const item of loaded) if (isDefaultModel(item.path) && facePartOf(item.path)) await shapeFace(item.parsed, facePartOf(item.path), player);
+  for (const item of loaded) {
+    if (!isDefaultModel(item.path)) continue;
+    if (facePartOf(item.path)) await shapeFace(item.parsed, facePartOf(item.path), player);
+    const hair = hairStyleOf(item.path) && hairFor(player);
+    if (hair) dressEditHair(item.parsed, hair, DEFAULTS);
+  }
   for (const item of loaded) addModel(item, player);
   $('fileName').textContent = label;
   if (wantRig()) await startRun();

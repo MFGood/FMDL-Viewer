@@ -7,7 +7,7 @@ export const dirOf = (p) => { const i = p.lastIndexOf('/'); return i < 0 ? '' : 
 export const fileOf = (p) => p.slice(p.lastIndexOf('/') + 1);
 export const stem = (p) => fileOf(normPath(p)).replace(/\.[^.]*$/, '').toLowerCase();
 const join = (a, b) => (a ? `${a}/${b}` : b);
-const TEXTURE_EXTS = ['dds', 'ftex', 'png', 'jpg', 'jpeg']; // .dds first; images are accepted too
+const TEXTURE_EXTS = ['dds', 'ftex', 'png', 'jpg', 'jpeg', 'avif']; // .dds first; images are accepted too
 
 /** Index of a set of file paths: folder listings and texture lookup by folder + stem. */
 export class FileIndex {
@@ -46,7 +46,7 @@ export class FileIndex {
   }
   textureStems(dir) {
     if (dir == null) return [];
-    return this.filesIn(dir).filter((p) => /\.(dds|ftex|png|jpe?g)$/i.test(p)).map((p) => ({ path: p, stem: stem(p) }));
+    return this.filesIn(dir).filter((p) => /\.(dds|ftex|png|jpe?g|avif)$/i.test(p)).map((p) => ({ path: p, stem: stem(p) }));
   }
 }
 

@@ -45,9 +45,10 @@ function classifyPreFox({ shader, states, missing }) {
   return { forward, kind, anim: null, label };
 }
 
-// Texture roles the viewer draws with. DiffuseMap is Pre-Fox's base texture. The normal, specular and roughness
+// Texture roles the viewer draws with. DiffuseMap is Pre-Fox's base texture; LayerMap is the viewer's own, a texture
+// layered over it by its alpha (edit hair's shell on the skin). The normal, specular and roughness
 // maps (Fox and Pre-Fox names) are drawn on lit materials while "Normal and specular maps" is on.
-const USED_ROLES = ['Base_Tex_SRGB', 'Base_Tex_LIN', 'MetalnessMap_Tex_LIN', 'GlassReflection_Tex_SRGB', 'Timing_Tex_LIN', 'DiffuseMap'];
+const USED_ROLES = ['Base_Tex_SRGB', 'Base_Tex_LIN', 'MetalnessMap_Tex_LIN', 'GlassReflection_Tex_SRGB', 'Timing_Tex_LIN', 'DiffuseMap', 'LayerMap'];
 const SURFACE_ROLES = {
   normal: ['NormalMap_Tex_NRM', 'NormalMap'],
   specular: ['SpecularMap_Tex_LIN', 'SpecularMap'],
@@ -214,7 +215,7 @@ export function makeMaterial(mesh, model) {
   return materialFor(mesh, model, map, cls);
 }
 
-/** A Pre-Fox material, following its .mtl states. */
+/** A Pre-Fox material, following its .mtl states, with its tint and layer if it has them. */
 function preFoxMaterial(mesh, model, map, cls) {
   const mi = mesh.materialInstance;
   const { states } = mi.prefox;
@@ -229,8 +230,55 @@ function preFoxMaterial(mesh, model, map, cls) {
     // Alpha test drops pixels at or below alpharef; blending drops only fully transparent ones.
     alphaTest: !map ? 0 : states.alphatest >= 1 ? Math.min(1, ((states.alpharef ?? 0) + 1) / 255) : cls.forward ? 0.01 : 0,
   };
-  if (cls.kind === 'constant') return new THREE.MeshBasicMaterial(common);
-  return litMaterial({ ...common, roughness: 0.75, metalness: 0, envMapIntensity: 0.35 }, model, mi, mesh);
+  const material = cls.kind === 'constant' ? new THREE.MeshBasicMaterial(common)
+    : litMaterial({ ...common, roughness: 0.75, metalness: 0, envMapIntensity: 0.35 }, model, mi, mesh);
+  if (map && mi.tint) addOverlayTint(material, mi.tint);
+  const layerRef = map && roleRef(mi, 'LayerMap'), layer = layerRef && textureFor(model, 'LayerMap', layerRef, mesh);
+  if (layer) addLayer(material, layer, mi.layerTint);
+  return material;
+}
+
+// GLSL: color a gray texel by overlay, in sRGB. Mid-gray becomes the tint, darker and lighter texels darken and
+// lighten it, so the texture keeps its shading in any color.
+const OVERLAY_GLSL = `
+  vec3 overlayTint(vec3 texel, vec3 tint) {
+    vec3 base = pow(texel, vec3(1.0 / 2.2)), c = pow(tint, vec3(1.0 / 2.2));
+    return pow(mix(2.0 * base * c, 1.0 - 2.0 * (1.0 - base) * (1.0 - c), step(0.5, base)), vec3(2.2));
+  }`;
+
+const linearTint = (tint) => {
+  const color = new THREE.Color().setRGB(...tint, THREE.SRGBColorSpace);
+  return new THREE.Vector3(color.r, color.g, color.b);
+};
+
+/** Color a gray texture (edit hair's strands) by overlay with a tint ([r, g, b], sRGB 0–1). */
+function addOverlayTint(material, tint) {
+  material.onBeforeCompile = (shader) => {
+    shader.uniforms.tint = { value: linearTint(tint) };
+    shader.fragmentShader = `uniform vec3 tint;\n${OVERLAY_GLSL}\n${shader.fragmentShader}`
+      .replace('#include <map_fragment>', '#include <map_fragment>\n  diffuseColor.rgb = overlayTint(diffuseColor.rgb, tint);');
+  };
+  material.customProgramCacheKey = () => 'overlay-tint';
+}
+
+/**
+ * Layer a texture over the base texture by its alpha (edit hair's shell on the skin), on the base texture's UVs,
+ * tinted by overlay when there's a tint.
+ */
+function addLayer(material, layer, tint) {
+  material.onBeforeCompile = (shader) => {
+    Object.assign(shader.uniforms, {
+      layerMap: { value: layer }, layerTint: { value: linearTint(tint || [0.5, 0.5, 0.5]) }, layerTinted: { value: tint ? 1 : 0 },
+    });
+    shader.fragmentShader = `uniform sampler2D layerMap;\nuniform vec3 layerTint;\nuniform float layerTinted;\n${OVERLAY_GLSL}\n${shader.fragmentShader}`
+      .replace('#include <map_fragment>', `#include <map_fragment>
+  {
+    vec4 layer = texture2D(layerMap, vMapUv);
+    vec3 color = layerTinted > 0.5 ? overlayTint(layer.rgb, layerTint) : layer.rgb;
+    diffuseColor.rgb = mix(diffuseColor.rgb, color, layer.a);
+  }`);
+  };
+  material.customProgramCacheKey = () => 'layer';
 }
 
 function materialFor(mesh, model, map, cls) {

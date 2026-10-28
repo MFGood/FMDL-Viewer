@@ -34,7 +34,7 @@ export function loadTexture(path) {
   if (!loading.has(key)) loading.set(key, (async () => {
     try {
       const buffer = await readFile(path);
-      const image = /\.(png|jpe?g)$/i.test(path) ? await decodeImage(buffer) : await decodeGameTexture(path, buffer);
+      const image = /\.(png|jpe?g|avif)$/i.test(path) ? await decodeImage(buffer) : await decodeGameTexture(path, buffer);
       const entry = { ...image, srgb: null, lin: null, timing: null, normal: null, specular: null, roughness: null };
       decoded.set(key, entry);
       return entry;

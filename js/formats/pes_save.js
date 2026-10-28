@@ -304,8 +304,13 @@ const APPEARANCE = [
     ['chin_wid', 0x2B, 4, 4],
     ['chin_hi', 0x2C, 0, 4], ['chin_dep', 0x2C, 4, 4],
     ['skin_col', 0x2D, 0, 3],
+    // Edit hair (PES 16; edit-hair.js turns them into the game's hair model and textures)
+    ['hair_col_r', 0x35, 6, 6], ['hair_col_g', 0x36, 4, 6], ['hair_col_b', 0x37, 2, 6],
+    ['hair_type', 0x38, 0, 4], ['hair_pt', 0x38, 4, 4],
+    ['hair_len', 0x3C, 0, 3], ['hair_tex', 0x3C, 3, 3], ['hair_acc', 0x3D, 0, 1], ['hair_acc_col', 0x3D, 1, 3],
     ['face_size', 0x33, 0, 4], ['face_height', 0x33, 4, 4],
-    ['iris_col', 0x40, 0, 4],
+    ['iris_col', 0x40, 0, 4], ['hair_sp', 0x40, 4, 8],
+    ['hair_dir', 0x42, 0, 3], ['hair_line', 0x42, 3, 3], ['hair_sb', 0x42, 6, 3], ['hair_ovm', 0x43, 1, 3], ['hair_part', 0x43, 4, 2],
 ];
 const appearanceAt = (start) => APPEARANCE.map(([name, byte, ...rest]) => [name, start + byte, ...rest]);
 
