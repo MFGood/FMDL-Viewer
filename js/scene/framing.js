@@ -73,7 +73,7 @@ function framedBox() {
   return box;
 }
 
-/** Distance from the box's centre that fits it in the viewport, at the normal field of view. */
+/** Distance from the box's center that fits it in the viewport, at the normal field of view. */
 function fitDistance(box) {
   const radius = Math.max(box.getSize(new THREE.Vector3()).length() / 2, 1e-3);
   const halfTan = Math.tan(THREE.MathUtils.degToRad(FOV / 2));

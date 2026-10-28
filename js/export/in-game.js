@@ -1,5 +1,5 @@
 // in-game.js — what PES shows of the default body for a player of an export linked to a team in the save file,
-// following the "FPC" (full player customisation) setups. The export's kit config turns a kit piece's model
+// following the "FPC" (full player customization) setups. The export's kit config turns a kit piece's model
 // into one that can be hidden (shirt model 176, shorts model 16, collar 105; a kit without a config gets the
 // 4cc AET compiler's generic one, which is set up that way), and then each player's appearance settings in the
 // save show or hide it:

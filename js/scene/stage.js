@@ -47,7 +47,7 @@ export const lineMaterials = new Set();
 
 // ---------------------------------------------------------------- ground grid
 
-// Fixed: centred on the origin at floor height, 5 m out in every horizontal direction (10 m × 10 m),
+// Fixed: centered on the origin at floor height, 5 m out in every horizontal direction (10 m × 10 m),
 // with 1 m squares. The two lines through the origin are drawn in the accent color.
 let grid = null;
 

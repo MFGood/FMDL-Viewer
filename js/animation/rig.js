@@ -101,7 +101,7 @@ function disposeRig() {
   rig = null;
 }
 
-/** A skinned copy of a mesh: same attributes and material, positions as modelled, bone weights added. */
+/** A skinned copy of a mesh: same attributes and material, positions as modeled, bone weights added. */
 function makeSkinned(m) {
   const v = m.mesh.vertices;
   if (!v.weightSum) return null; // no bone weights in this mesh's vertex format: it stays rigid
@@ -113,7 +113,7 @@ function makeSkinned(m) {
   geometry.setIndex(source.index);
   geometry.setAttribute('position', new THREE.BufferAttribute(v.position, 3));
 
-  const n = v.count, indices = new Uint16Array(n * 4), raw = new Float32Array(n * 4), normalised = new Float32Array(n * 4);
+  const n = v.count, indices = new Uint16Array(n * 4), raw = new Float32Array(n * 4), normalized = new Float32Array(n * 4);
   const staticIndex = rig.index.get(rig.staticBone);
   for (let i = 0; i < n; i++) {
     let valid = 0;
@@ -128,13 +128,13 @@ function makeSkinned(m) {
     const lost = v.weightSum[i] - valid;
     if (lost > 1e-6) for (let k = 0; k < 4; k++) if (!raw[i * 4 + k]) { indices[i * 4 + k] = staticIndex; raw[i * 4 + k] = lost; break; }
     const sum = raw[i * 4] + raw[i * 4 + 1] + raw[i * 4 + 2] + raw[i * 4 + 3];
-    if (sum > 0) for (let k = 0; k < 4; k++) normalised[i * 4 + k] = raw[i * 4 + k] / sum;
-    else { indices[i * 4] = staticIndex; normalised[i * 4] = 1; } // unweighted: stays put when weight scaling is off
+    if (sum > 0) for (let k = 0; k < 4; k++) normalized[i * 4 + k] = raw[i * 4 + k] / sum;
+    else { indices[i * 4] = staticIndex; normalized[i * 4] = 1; } // unweighted: stays put when weight scaling is off
   }
   geometry.setAttribute('skinIndex', new THREE.Uint16BufferAttribute(indices, 4));
-  // Raw weights reproduce PES weight scaling (Σ wᵢ·Mᵢ·p, so at rest Σw·p); normalised ones don't.
-  geometry.setAttribute('skinWeight', new THREE.BufferAttribute(options.weightScaling ? raw : normalised, 4));
-  geometry.userData.weights = { raw, normalised };
+  // Raw weights reproduce PES weight scaling (Σ wᵢ·Mᵢ·p, so at rest Σw·p); normalized ones don't.
+  geometry.setAttribute('skinWeight', new THREE.BufferAttribute(options.weightScaling ? raw : normalized, 4));
+  geometry.userData.weights = { raw, normalized };
 
   const skinned = new THREE.SkinnedMesh(geometry, m.obj.material);
   skinned.bind(rig.skeleton, new THREE.Matrix4());
@@ -166,12 +166,12 @@ export function stopRun() {
   disposeRig();
 }
 
-/** Switch the skinned copies between raw (PES weight scaling) and normalised weights. */
+/** Switch the skinned copies between raw (PES weight scaling) and normalized weights. */
 export function applySkinWeights() {
   for (const m of state.meshObjects) {
     if (!m.skinned) continue;
-    const { raw, normalised } = m.skinned.geometry.userData.weights;
-    const wanted = options.weightScaling ? raw : normalised;
+    const { raw, normalized } = m.skinned.geometry.userData.weights;
+    const wanted = options.weightScaling ? raw : normalized;
     if (m.skinned.geometry.getAttribute('skinWeight').array !== wanted) m.skinned.geometry.setAttribute('skinWeight', new THREE.BufferAttribute(wanted, 4));
   }
 }

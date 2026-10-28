@@ -116,10 +116,10 @@ assets/
 - [three.js](https://threejs.org) 0.160 (MIT), loaded from jsDelivr.
 - [JSZip](https://stuk.github.io/jszip/) 3.10 (MIT), loaded from cdnjs the first time a .zip is opened.
 - 7-Zip 24.09 via [7z-wasm](https://github.com/use-strict/7z-wasm) (LGPL; RAR decoding under the unRAR
-  licence restriction), in `vendor/7zip/`.
+  license restriction), in `vendor/7zip/`.
 - The model and texture parsing and the PES skeleton data are ported from
   [pes-fmdl-blender](https://github.com/the4chancup/pes-fmdl-blender) by the4chancup; see that
-  repository for its licence. The `.model` parsing is ported from
+  repository for its license. The `.model` parsing is ported from
   [pes-model-blender](https://github.com/the4chancup/pes-model-blender), also by the4chancup.
-- Shader behaviour follows the Fox Engine section of the
+- Shader behavior follows the Fox Engine section of the
   [implyingrigged.info Materials wiki](https://implyingrigged.info/wiki/Materials).

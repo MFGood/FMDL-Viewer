@@ -18,7 +18,7 @@ export function el(tag, attrs = {}, ...children) {
 }
 
 let checkboxCount = 0;
-/** A labelled checkbox. Returns { input, label }; onChange(checked) runs when it's toggled. */
+/** A labeled checkbox. Returns { input, label }; onChange(checked) runs when it's toggled. */
 export function checkbox(text, checked, onChange) {
   const id = `checkbox-${checkboxCount++}`;
   const input = el('input', { type: 'checkbox', id });
