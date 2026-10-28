@@ -4,6 +4,7 @@ import { index } from '../core/files.js';
 import { state } from '../core/state.js';
 import { resolveTexture, availableKits } from '../formats/aet.js';
 import { DEFAULTS, skinTexture, chosenSkin } from './players.js';
+import { ownSkinWins, customSkinTexture } from './in-game.js';
 
 /** Where to look for a model's textures: its own folder, plus the export's shared folders. */
 export const lookupContext = (model) => ({
@@ -22,14 +23,18 @@ const refContext = (model, ref) => (ref.baseDir != null ? { ...lookupContext(mod
 
 /**
  * The open file a texture reference resolves to, or null. Kit textures follow the current kit; skin
- * textures follow the player's skin colour, looked up next to the model first and then in the defaults.
+ * textures follow the player's skin colour (or their own skin textures, linked to a PES 18+ save), looked up
+ * next to the model first and then in the defaults. With the mesh, the default body's arms and thighs can take
+ * the player's own arm_bsm / thigh_bsm (customSkinTexture).
  */
-export function texturePath(model, ref) {
+export function texturePath(model, ref, mesh = null) {
   const skinned = skinTexture(ref);
   if (skinned) {
+    const own = mesh && customSkinTexture(model, mesh);
+    if (own) return own;
     const skin = skinFor(model.player);
-    if (skin === CUSTOM_SKIN) {
-      const custom = customSkinPath(model, ref, skinned) || firstCustomSkin(skinned);
+    if (skin === CUSTOM_SKIN || ownSkinWins(model.player)) {
+      const custom = customSkinPath(model, ref, skinned) || playerSkinPath(model.player, skinned) || firstCustomSkin(skinned);
       if (custom) return custom;
     }
     const name = skinned.numbered(skin === CUSTOM_SKIN ? 1 : skin);
@@ -47,6 +52,15 @@ export const CUSTOM_SKIN = 7;
 
 const customSkinPath = (model, ref, skinned) =>
   resolveTexture(index, { ...ref, filename: `${skinned.custom}.dds` }, refContext(model, ref), null);
+
+/** A custom skin texture in the player's own face, boots or gloves folder, or null. */
+const playerSkinPath = (player, skinned) => {
+  for (const part of [player?.face, player?.boots, player?.gloves]) {
+    const path = part && index.texture(part.dir, skinned.custom);
+    if (path) return path;
+  }
+  return null;
+};
 
 /** The first custom texture the loaded models' skin textures can use (of one kind, or any), or null. */
 function firstCustomSkin(kind = null) {

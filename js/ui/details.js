@@ -14,6 +14,7 @@ import { offWeightCount } from '../scene/geometry.js';
 import { strayCount } from '../scene/framing.js';
 import { applyVisibility, selectKit, selectSkin } from '../viewer.js';
 import { reloadForDefaults } from './team.js';
+import { inGameLook, hiddenInWords } from '../export/in-game.js';
 
 /** Vertex, triangle and mesh counts for what's shown, and the stray-mesh count. */
 export function renderStats() {
@@ -48,15 +49,23 @@ export function renderSkins() {
   buttonRow($('skins'), numbers.map((n) => ({ label: String(n), title: title(n), on: n === current, onClick: () => selectSkin(n) })));
 }
 
-/** "This player": default models for the viewed player, overriding the global setting. */
+/** "This player": default models for the viewed player, overriding the global setting (or the save's, when linked). */
 export function renderPlayerPanel() {
   const player = viewedPlayer(), parts = defaultParts(player);
   // Any player with models can get defaults; portrait-only players have nothing for them to complete.
   $('playerSection').hidden = !player || !parts.boots;
   if ($('playerSection').hidden) return;
   $('tPlayerDefaults').checked = defaultsOn(player);
-  const note = $('playerDefaultsNote');
+  const note = $('playerDefaultsNote'), look = inGameLook(player);
+  $('tPlayerDefaults').disabled = !!look;
   note.textContent = '';
+  if (look) {
+    // Linked to the save: the game's rules, from the player's appearance settings and the kit's config.
+    const hidden = hiddenInWords(look);
+    note.append(`As in the game, from their settings in ${state.save.name} and the kit's config: `
+      + `${hidden ? `the default body without its ${hidden}` : 'all of the default body and hands'}.`);
+    return;
+  }
   const hands = defaultHandsLabel(parts);
   const what = hands === 'hands' ? 'the default body and hands'
     : hands ? `the default body and ${hands} (they have their own other hand)`
@@ -108,17 +117,21 @@ export function renderTree() {
   for (const model of state.models) {
     const meshesIn = (group) => state.meshObjects.filter((m) => m.model === model && m.mesh.group === group);
     const meshesUnder = (group) => meshesIn(group).length + group.children.reduce((n, g) => n + meshesUnder(g), 0);
-    // Unticked groups and meshes are remembered in model.hidden, so they stay hidden next time.
+    // Unticked groups and meshes are remembered in model.hidden, so they stay hidden next time. Linked to the
+    // save, a group whose meshes the game hides is unticked too; ticking it shows them anyway (hidden.unhid).
     const { hidden } = model, groupIndex = (g) => model.parsed.meshGroups.indexOf(g);
+    const allUnder = (group) => [...meshesIn(group), ...group.children.flatMap(allUnder)];
+    const gameHidesAll = (group) => { const all = allUnder(group); return all.length > 0 && all.every((m) => m.gameHides); };
     const groupItem = (group) => {
       const item = el('li');
-      const { label } = checkbox(group.name || '(unnamed)', !hidden.groups.has(groupIndex(group)), (on) => {
+      const { label } = checkbox(group.name || '(unnamed)', !hidden.groups.has(groupIndex(group)) && !gameHidesAll(group), (on) => {
         item.querySelectorAll('input[type=checkbox]').forEach((c) => (c.checked = on));
         const setGroup = (g) => {
           if (on) hidden.groups.delete(groupIndex(g)); else hidden.groups.add(groupIndex(g));
           for (const m of meshesIn(g)) {
             m.groupVisible = on;
             if (on) hidden.meshes.delete(m.mesh.index); else hidden.meshes.add(m.mesh.index);
+            if (on && m.hiddenInGame) hidden.unhid.add(m.mesh.index); else hidden.unhid.delete(m.mesh.index);
           }
           g.children.forEach(setGroup);
         };
@@ -149,7 +162,7 @@ export function renderTree() {
 /** One mesh in the tree; its material name links to the material in the Materials list. */
 function meshLine(m) {
   const offWeight = offWeightCount(m.mesh.vertices);
-  const flags = m.obj.userData.antiblur ? ' · anti-blur' : m.obj.userData.invisible ? ' · invisible' : '';
+  const flags = (m.obj.userData.antiblur ? ' · anti-blur' : m.obj.userData.invisible ? ' · invisible' : '') + (m.hiddenInGame ? ' · hidden in game' : '');
   const mi = m.mesh.materialInstance;
   const link = el('button', { type: 'button', class: 'mat-link', title: 'Show this material' }, mi.name);
   link.addEventListener('click', () => showMaterial(mi));

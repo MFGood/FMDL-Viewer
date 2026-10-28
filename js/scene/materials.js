@@ -51,11 +51,11 @@ export const isUsedRole = (role) => USED_ROLES.some((r) => r.toLowerCase() === r
 const roleRef = (mi, role) => mi.textures.find(([r]) => r.toLowerCase() === role.toLowerCase())?.[1] || null;
 const baseRole = (mi) => mi.textures.find(([r]) => /^(Base_Tex|DiffuseMap$)/i.test(r)) || null;
 
-function textureFor(model, role, ref) {
+function textureFor(model, role, ref, mesh) {
   if (!ref || !options.textures) return null;
   // A Pre-Fox sampler says its own colour space (srgb="1"); Fox roles end in _SRGB or _LIN.
   const srgb = ref.srgb ?? /_SRGB$/i.test(role);
-  return gpuTexture(texturePath(model, ref), srgb ? 'srgb' : 'lin');
+  return gpuTexture(texturePath(model, ref, mesh), srgb ? 'srgb' : 'lin');
 }
 
 /** Every texture file the meshes need, so they can be decoded before the materials are built. */
@@ -65,7 +65,7 @@ export function texturesNeeded(meshObjects) {
   for (const { mesh, model } of meshObjects) {
     for (const [role, ref] of mesh.materialInstance.textures) {
       if (!isUsedRole(role)) continue;
-      const path = texturePath(model, ref);
+      const path = texturePath(model, ref, mesh);
       if (path) paths.add(path);
     }
   }
@@ -162,7 +162,7 @@ export function updateUvAnimations(t) {
 export function makeMaterial(mesh, model) {
   const mi = mesh.materialInstance, cls = classify(mi);
   const base = baseRole(mi);
-  let map = base ? textureFor(model, base[0], base[1]) : null;
+  let map = base ? textureFor(model, base[0], base[1], mesh) : null;
   // Timing-texture UV step needs the timing texture and a second (timing) UV map on the mesh.
   if (cls.anim === 'step' && param(mi, 'Use_Timing_Texture') >= 0.5 && mesh.vertices.uv[1] && options.textures) {
     const ref = roleRef(mi, 'Timing_Tex_LIN');

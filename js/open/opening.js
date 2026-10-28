@@ -13,6 +13,7 @@ import { setStatus, flashStatus, showError, hideError, forgetDismissedErrors } f
 import { state } from '../core/state.js';
 import { normPath, fileOf, scanExport } from '../formats/aet.js';
 import { linkSaveTeam } from '../export/save-team.js';
+import { readKitConfigs } from '../export/in-game.js';
 import { DEFAULTS, DEFAULT_FILES, playerSettings } from '../export/players.js';
 import { forgetTextures } from '../scene/textures.js';
 import { cameraView } from '../scene/framing.js';
@@ -66,6 +67,7 @@ async function openExport(label) {
   setStatus('Reading export…');
   const listProblems = await readModelLists();
   state.aet = await scanExport(index, readText, isModelPath);
+  if (state.aet) state.aet.kitConfigs = await readKitConfigs(state.aet);
   linkSaveTeam();
   if (!state.aet) {
     setStatus(null);

@@ -6,6 +6,7 @@ import { state } from '../core/state.js';
 import { listedModels } from '../core/files.js';
 import { stem } from '../formats/aet.js';
 import { savePlayerOf, skinFromSave } from './save-team.js';
+import { inGameLook } from './in-game.js';
 
 // ---------------------------------------------------------------- default boots and hands
 
@@ -92,20 +93,22 @@ function ownHands(p) {
 }
 
 /**
- * Whether a player gets the default models: their own setting if they have one; else off for players with
- * their own boots model, and the global setting for the rest.
+ * Whether a player gets the default models: always for a player linked to the save, as the game always loads
+ * the body (in-game.js decides what of it shows); else their own setting if they have one, off for players
+ * with their own boots model, and the global setting for the rest.
  */
-export const defaultsOn = (p) => settingsOf(p).useDefaults ?? (hasOwnBoots(p) ? false : options.defaultModels);
+export const defaultsOn = (p) => (savePlayerOf(p) ? true : settingsOf(p).useDefaults ?? (hasOwnBoots(p) ? false : options.defaultModels));
 
 /**
  * Which default models a player would get: { boots, left, right, hands } (hands: either hand). Defaults
  * complete a player's own models, so a player with none (portrait only) gets nothing. The body is added for
- * any player with models, and each hand when they have a face model but no model of that hand.
+ * any player with models, and each hand when they have a face model but no model of that hand (and, linked
+ * to the save, the game shows the default hands).
  */
 export function defaultParts(p) {
   if (!p || p.collars) return { boots: false, left: false, right: false, hands: false };
   const boots = !!(p.face?.fmdls.length || p.boots?.fmdls.length || p.gloves?.fmdls.length);
-  const own = ownHands(p), face = boots && !!p.face?.fmdls.length;
+  const own = ownHands(p), face = boots && !!p.face?.fmdls.length && (inGameLook(p)?.hands ?? true);
   const left = face && !own.left, right = face && !own.right;
   return { boots, left, right, hands: left || right };
 }
@@ -154,13 +157,17 @@ export function chosenSkin(player) {
 // players keep theirs in their settings; loose models and Collars share one list for the session.
 const looseHidden = new Map();
 
-/** What's hidden of one model: { model, groups (mesh group indices), meshes (mesh indices) }. */
+/**
+ * What's hidden of one model: { model, groups (mesh group indices), meshes (mesh indices), unhid (indices of
+ * meshes ticked back on although the game hides them, for a player linked to the save) }.
+ */
 export function hiddenParts(player, path) {
   const own = player && !player.collars;
   let all = own ? settingsOf(player).hidden : looseHidden;
   if (!all) setSetting(player, 'hidden', (all = new Map()));
   let parts = all.get(path);
-  if (!parts) all.set(path, (parts = { model: false, groups: new Set(), meshes: new Set() }));
+  if (!parts) all.set(path, (parts = { model: false, groups: new Set(), meshes: new Set(), unhid: new Set() }));
+  parts.unhid ||= new Set();
   return parts;
 }
 

@@ -85,7 +85,7 @@ export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.te
   const root = findRoot(index);
   if (root === null) return null;
   const folder = (name) => index.subdir(root, name);
-  const out = { root, teamName: null, teamId: null, notePath: null, logoPath: null, kitDir: folder('Kit Textures'), commonDir: folder('Common'), players: [], collars: [] };
+  const out = { root, teamName: null, teamId: null, notePath: null, logoPath: null, kitDir: folder('Kit Textures'), kitConfigDir: folder('Kit Configs'), commonDir: folder('Common'), players: [], collars: [] };
 
   // Team note: a .txt at the top level, preferring one with "note" in its name. First "Team:" line, and the
   // "ID:" line under it if there is one.

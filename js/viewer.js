@@ -14,6 +14,7 @@ import { dirOf, fileOf } from './formats/aet.js';
 import { isDefaultModel, viewedPlayer, setSetting, hiddenParts } from './export/players.js';
 import { pickCurrentKit, kitsAvailable } from './export/texture-lookup.js';
 import { savePlayerOf, skinToSave } from './export/save-team.js';
+import { inGameLook, hiddenInGame } from './export/in-game.js';
 import { keepSaveEdits } from './core/save.js';
 import { scene, boxLayer, boneLayer } from './scene/stage.js';
 import { buildGeometry, applyWeightScaling } from './scene/geometry.js';
@@ -141,6 +142,7 @@ let refreshCount = 0;
 export async function refreshMaterials() {
   const refresh = ++refreshCount;
   pickCurrentKit();
+  applyVisibility(); // linked to the save, the kit's config and the skin colour decide what of the default body shows
   renderKits();
   renderSkins();
   const needed = [...texturesNeeded(state.meshObjects)];
@@ -183,14 +185,28 @@ export function selectSkin(n) {
 
 // ---------------------------------------------------------------- what's shown
 
-/** Show or hide meshes per the model tree and options, then update the counts. */
+let hiddenInGameBefore = '';
+
+/**
+ * Show or hide meshes per the model tree, the options and (linked to the save) the game, then update the counts.
+ * The tree is redrawn when what the game hides changes, as its boxes show that.
+ */
 export function applyVisibility() {
-  const animating = rigged();
+  const animating = rigged(), looks = new Map();
+  const lookOf = (model) => {
+    if (!isDefaultModel(model.path)) return null;
+    if (!looks.has(model.player)) looks.set(model.player, inGameLook(model.player));
+    return looks.get(model.player);
+  };
   for (const m of state.meshObjects) {
-    m.shown = m.model.visible && m.groupVisible && (options.hiddenMeshes || !m.obj.userData.hiddenByFile);
+    m.hiddenInGame = hiddenInGame(m.mesh, lookOf(m.model));
+    m.gameHides = m.hiddenInGame && !m.model.hidden.unhid.has(m.mesh.index);
+    m.shown = m.model.visible && m.groupVisible && !m.gameHides && (options.hiddenMeshes || !m.obj.userData.hiddenByFile);
     m.obj.visible = m.shown && !(animating && m.skinned);
     if (m.skinned) m.skinned.visible = m.shown && animating;
   }
+  const hiddenNow = state.meshObjects.map((m) => (m.hiddenInGame ? 1 : 0)).join('');
+  if (hiddenNow !== hiddenInGameBefore) { hiddenInGameBefore = hiddenNow; renderTree(); }
   renderStats();
 }
 

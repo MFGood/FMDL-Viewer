@@ -12,7 +12,6 @@ import { loadModels, showNoModels } from '../viewer.js';
 import { renderPlayerPanel } from './details.js';
 import { renderBodyPanel } from './body-shape.js';
 import { linkSaveTeam, useTeamId, preFoxSave } from '../export/save-team.js';
-import { applyBodyShapeOption, refreshMaterials } from '../viewer.js';
 import { captureView } from '../open/opening.js';
 
 // ---------------------------------------------------------------- portraits
@@ -118,15 +117,14 @@ $('saveLink').addEventListener('submit', async (e) => {
   await showSaveLink();
 });
 
-/** Show the export's link to the save as it is now: names in the roster, the body shape. */
+/**
+ * Show the export's link to the save as it is now: names in the roster, and the viewed player reloaded, as
+ * the save decides their default models, body shape and skin colour.
+ */
 async function showSaveLink() {
-  await renderTeam();
+  await reloadForDefaults();
   if (state.activePlayer?.row) markActive(state.activePlayer);
-  const player = viewedPlayer();
-  if (player) $('fileName').textContent = `${state.aet.teamName ? `${state.aet.teamName} · ` : ''}${playerTitle(player)}`;
-  renderPlayerPanel();
   renderBodyPanel();
-  await Promise.all([refreshMaterials(), applyBodyShapeOption()]);
 }
 
 /** Link the open export with the save file again (after either changes), and show it. */
