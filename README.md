@@ -16,6 +16,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Default models:** players with only a face model are shown with a default PES 17 or PES 21 body and hands. Skin color can be picked per player, including the player's own custom skin textures, and the defaults can be turned off globally or per player.
 - **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. The helper bones (shorts, sleeves, shoulders, collar…) move the way PES moves them, so kits deform as they do in game.
 - **Body shape:** PES's 14 physique settings as sliders, scaling the skeleton the way PES 2016 does.
+- **Face editor:** Pre-Fox players without a face model of their own get PES 16's editable face. With Edited face on (`b_edit_face` in the save), the face editor frames the face and turns the details pane into the game's face sliders, shaping it the way PES 2016 does.
 - **Settings:** the cog at the top right opens the global settings: display options, default models, a PES save file and navigation. They're remembered in the browser between visits.
 - **Save files:** load a PES 15–21 save under Save file in the settings, or drop it on the window (a file without an extension is tried as a save first); it's kept in the browser. An open export is matched to its team in the save, and its players then use their names, body shapes and skin colors from the save (edits are written back to the copy kept in the browser, and **Export** downloads it). The default body also shows and hides pieces the way the game does for FPC setups. A PES 15–17 save goes with Pre-Fox exports and a PES 18–21 save with Fox ones.
 - **Display options:**
@@ -34,7 +35,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
   - **View keys (numpad or number row):** **1** / **Ctrl+1** front / back, **3** / **Ctrl+3** right / left,
     **7** / **Ctrl+7** top / bottom, **5** perspective / orthographic, **9** turn 180° (top ↔ bottom from
     those views), **4** / **6** orbit 15° around, **8** / **2** orbit 15° over, **.** frame the model keeping
-    the angle, **+** / **=** and **−** zoom.
+    the angle (in the face editor, the face from the front), **+** / **=** and **−** zoom.
   - **Arrows:** orbit. **Shift+↑/↓:** zoom. **Alt+arrows:** pan.
   - **Ctrl+↑/↓:** previous/next player. **Ctrl+←/→:** previous/next kit.
 - **Textures:** reads DDS (including BC7), FTEX, PNG and JPG.
@@ -92,12 +93,14 @@ js/
     run-cycle.js           procedural run cycle on the PES skeleton
     helper-bones.js        PES's helper-bone drivers (shorts, sleeves, shoulders, collar…), ported from the game
     body-shape.js          PES's physique settings as per-bone scales, from the game's tables
+    face-shape.js          PES 16's face sliders on its editable face (faceHi), from the game's tables
     rig.js                 skinned copies of the meshes, driven by the run cycle and body shape
   ui/
     details.js             right-hand panel: counts, kits, skin color, model tree, materials
     team.js                left-hand panel: team, players, switching players
     settings.js            settings panel (cog button): display options, default models, navigation
     body-shape.js          the Body shape sliders
+    face-editor.js         the Face section and the face editor
   open/
     gather.js              what was dropped or picked, as files
     archives.js            .zip (JSZip) and .7z / .rar (7-Zip) reading
@@ -107,7 +110,7 @@ vendor/7zip/               7-Zip compiled to WebAssembly (loaded only for .7z / 
 assets/
   pes-skeleton.json        full PES skeleton (loaded when the run animation or a body shape is first turned on)
   pes-bind-frames.json     bind orientations of the PES bones, for the helper-bone drivers
-  defaults/                default body, hands and skin textures (loaded when a player needs them)
+  defaults/                default body, hands, editable face and skin textures (loaded when a player needs them)
   sample/                  the example model shown at start-up
 ```
 

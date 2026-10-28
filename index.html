@@ -83,6 +83,23 @@
       <div class="body-sliders" id="bodySliders"></div>
       <p class="hint" id="bodyNote"></p>
     </section>
+    <section id="faceSection" hidden>
+      <h2>Face</h2>
+      <div class="toggles">
+        <label class="chk"><input type="checkbox" id="tEditFace"> Edited face</label>
+      </div>
+      <button type="button" id="openFaceEditor" hidden>Face editor</button>
+      <p class="hint" id="faceNote"></p>
+    </section>
+    <section id="faceEditor">
+      <div class="face-editor-head">
+        <h2>Face editor</h2>
+        <button type="button" id="closeFaceEditor">Done</button>
+      </div>
+      <p class="hint control-hint"><kbd>.</kbd> brings the camera back to the face</p>
+      <div id="faceSliders"></div>
+      <p class="hint"><span id="faceEditorNote"></span> <button type="button" class="linkish" id="resetFace">Reset</button></p>
+    </section>
     <section id="skinSection" hidden>
       <h2>Skin color</h2>
       <div class="kits" id="skins"></div>

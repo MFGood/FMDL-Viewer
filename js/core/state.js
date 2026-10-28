@@ -24,6 +24,8 @@ export const state = {
    * { wrongVersion } when the save is for the other generation of PES than the export (Pre-Fox or Fox), or null.
    */
   saveLink: null,
+  /** Whether the face editor is open: the details pane shows the face sliders and framing aims at the face. */
+  faceEditing: false,
   /** While a reload is reopening things: { player, kit, camera } to put back. */
   pendingRestore: null,
 };

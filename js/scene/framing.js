@@ -62,12 +62,22 @@ const shownMeshes = () => {
   return shown.length ? shown : state.meshObjects;
 };
 
+/** In the face editor, the editable face's shown meshes; else none. */
+const faceMeshes = () => (state.faceEditing ? state.meshObjects.filter((m) => m.model.editableFace && m.shown) : []);
+
 /** Number of stray pieces among the meshes shown. */
 export const strayCount = () => (state.meshObjects.length ? mainBody(shownMeshes()).stray : 0);
 
-/** The box framing aims at: the shown meshes, leaving out stray pieces unless "Frame stray meshes" is on. */
+/**
+ * The box framing aims at: the shown meshes, leaving out stray pieces unless "Frame stray meshes" is on; in the
+ * face editor, the face.
+ */
 function framedBox() {
-  const box = new THREE.Box3();
+  const box = new THREE.Box3(), face = faceMeshes();
+  if (face.length) {
+    for (const m of face) { m.obj.geometry.computeBoundingBox(); box.union(m.obj.geometry.boundingBox); }
+    return box;
+  }
   if (!options.frameStray) box.copy(mainBody(shownMeshes()).box);
   else for (const m of shownMeshes()) { m.obj.geometry.computeBoundingBox(); box.union(m.obj.geometry.boundingBox); }
   return box;
@@ -102,6 +112,9 @@ export function frameView(to) {
 
 /** Move smoothly to fit the shown meshes in view, keeping the camera's angle (pan and zoom only). */
 export const frameKeepingAngle = () => animateTo(frameView(goal()));
+
+/** Move smoothly to the front view, fitting what framing aims at (the face, in the face editor). */
+export const frameFront = () => animateTo(frameView({ ...goal(), yaw: 0, pitch: 0, roll: 0 }));
 
 /** The middle of the box framing aims at (leaving out stray meshes unless "Frame stray meshes" is on), or null. */
 export function framedCenter() {

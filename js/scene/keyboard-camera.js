@@ -4,13 +4,15 @@
 // Blender-style view keys (numpad or the number row):
 //   1 / Ctrl+1 front / back, 3 / Ctrl+3 right / left, 7 / Ctrl+7 top / bottom (each also framing the model),
 //   5 perspective ↔ orthographic, 9 turn 180° (top ↔ bottom from those views), 4 / 6 orbit ±15° about the
-//   vertical, 8 / 2 orbit ±15° over the top, . frame the model keeping the angle, + / = and − zoom.
+//   vertical, 8 / 2 orbit ±15° over the top, . frame the model keeping the angle (in the face editor, the face
+//   from the front), + / = and − zoom.
 // 4, 6, 8, 2 and zoom act at once; the rest move smoothly.
 
 import * as THREE from 'three';
 import { isTyping } from '../core/dom.js';
 import { view, goal, animateTo, finishAnimation, orbit, pan, zoom, zoomStep } from './navigation.js';
-import { frameKeepingAngle, frameView, framedCenter } from './framing.js';
+import { state } from '../core/state.js';
+import { frameKeepingAngle, frameFront, frameView, framedCenter } from './framing.js';
 
 const held = new Set();
 let shift = false, alt = false;
@@ -58,7 +60,7 @@ function viewKey(e) {
     case '2': orbitOver(STEP); return true;
   }
   switch (e.code) {
-    case 'Period': case 'NumpadDecimal': frameKeepingAngle(); return true;
+    case 'Period': case 'NumpadDecimal': if (state.faceEditing) frameFront(); else frameKeepingAngle(); return true;
     case 'Equal': case 'NumpadAdd': finishAnimation(); zoomStep(1); return true;
     case 'Minus': case 'NumpadSubtract': finishAnimation(); zoomStep(-1); return true;
   }

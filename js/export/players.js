@@ -7,11 +7,15 @@ import { listedModels } from '../core/files.js';
 import { stem } from '../formats/aet.js';
 import { savePlayerOf, skinFromSave } from './save-team.js';
 import { inGameLook } from './in-game.js';
+import { FACE_MODEL } from '../animation/face-shape.js';
 
 // ---------------------------------------------------------------- default boots and hands
 
 /** Folder the default models are registered under in the virtual file system. */
 export const DEFAULTS = 'default models';
+
+/** The default face's skin textures, head_color_<letter>.dds, for skin colors 1–6 (the game's face_config.xml). */
+const HEAD_COLORS = ['w', 'y', 'o', 'r', 'd', 'b'];
 
 /** Versions of the default models, picked under "Default models": id → button label. */
 export const DEFAULT_VERSIONS = { 17: 'PES 17', 21: 'PES 21' };
@@ -19,13 +23,19 @@ export const DEFAULT_VERSIONS = { 17: 'PES 17', 21: 'PES 21' };
 /**
  * The default models and their textures, in assets/defaults/: a PES body without a head (boots.<version>.fmdl,
  * with kit, shoes and skin meshes) and hands (glove_l / glove_r.<version>.fmdl), with skin, thigh and arm
- * textures in skin colors 1–6.
+ * textures in skin colors 1–6; and PES 16's editable face (face/faceHi.model with face.mtl, its head_color
+ * textures in the six skin colors, eyelashes and eye shadow).
  */
 export const DEFAULT_FILES = [
   ...Object.keys(DEFAULT_VERSIONS).flatMap((v) => [`boots.${v}.fmdl`, `glove_l.${v}.fmdl`, `glove_r.${v}.fmdl`]),
   'shoes_bsm.jpg',
   ...[1, 2, 3, 4, 5, 6].flatMap((n) => [`skin_color_${n}.jpg`, `thigh_${n}_bsm.jpg`, `arm_${n}_bsm.jpg`]),
+  FACE_MODEL, 'face/face.mtl', 'face/face_eyelash.dds', 'face/EyeOcclusion01.dds',
+  ...HEAD_COLORS.map((c) => `face/head_color_${c}.dds`),
 ];
+
+/** The default .model files' list entries for readModelLists: the editable face with its face.mtl. */
+export const DEFAULT_LISTINGS = [{ path: `${DEFAULTS}/${FACE_MODEL}`, mtl: `${DEFAULTS}/face/face.mtl`, type: 'face' }];
 
 export const isDefaultModel = (path) => path.startsWith(`${DEFAULTS}/`);
 
@@ -99,18 +109,25 @@ function ownHands(p) {
  */
 export const defaultsOn = (p) => (savePlayerOf(p) ? true : settingsOf(p).useDefaults ?? (hasOwnBoots(p) ? false : options.defaultModels));
 
+// Face .xml types that replace the game's own face (the editable faceHi).
+const FACE_TYPES = ['face_neck', 'face'];
+
+/** Whether a player's face folder has a face model of its own, standing in for the game's editable face. */
+export const hasOwnFace = (p) => listedTypes(p).some((t) => FACE_TYPES.includes(t.type));
+
 /**
- * Which default models a player would get: { boots, left, right, hands } (hands: either hand). Defaults
+ * Which default models a player would get: { boots, left, right, hands, face } (hands: either hand). Defaults
  * complete a player's own models, so a player with none (portrait only) gets nothing. The body is added for
  * any player with models, and each hand when they have a face model but no model of that hand (and, linked
- * to the save, the game shows the default hands).
+ * to the save, the game shows the default hands). A Pre-Fox player without a face model of their own gets the
+ * game's editable face, which their face settings shape.
  */
 export function defaultParts(p) {
-  if (!p || p.collars) return { boots: false, left: false, right: false, hands: false };
+  if (!p || p.collars) return { boots: false, left: false, right: false, hands: false, face: false };
   const boots = !!(p.face?.fmdls.length || p.boots?.fmdls.length || p.gloves?.fmdls.length);
   const own = ownHands(p), face = boots && !!p.face?.fmdls.length && (inGameLook(p)?.hands ?? true);
   const left = face && !own.left, right = face && !own.right;
-  return { boots, left, right, hands: left || right };
+  return { boots, left, right, hands: left || right, face: boots && isPreFox(p.fmdls) && !hasOwnFace(p) };
 }
 
 /** The .fmdl / .model paths to show for an export player: their own, plus the defaults they get. */
@@ -120,6 +137,7 @@ export function modelsFor(p) {
   if (parts.boots) extra.push(defaultModel('boots', prefox));
   if (parts.left) extra.push(defaultModel('glove_l', prefox));
   if (parts.right) extra.push(defaultModel('glove_r', prefox));
+  if (parts.face) extra.push(`${DEFAULTS}/${FACE_MODEL}`);
   return [...p.fmdls, ...extra];
 }
 
@@ -130,13 +148,15 @@ export function defaultHandsLabel(parts) {
 
 // ---------------------------------------------------------------- skin color
 
-// Skin-colored textures. Meshes reference skin_color(_0).dds, thigh_bsm.dds or arm_bsm.dds; PES swaps in
-// the player's skin color (skin_color_1 … _6, thigh_1_bsm … _6, arm_1_bsm … _6). When the texture is found
+// Skin-colored textures. Meshes reference skin_color(_0).dds, thigh_bsm.dds or arm_bsm.dds (the editable face
+// head_color_w.dds); PES swaps in the player's skin color (skin_color_1 … _6, thigh_1_bsm … _6, arm_1_bsm … _6,
+// head_color_w / y / o / r / d / b). When the texture is found
 // as named in the referenced folder, it's offered as a 7th, custom color.
 const SKIN_TEXTURES = [
   { pattern: /^skin_color(_\d+)?$/i, custom: 'skin_color', numbered: (n) => `skin_color_${n}` },
   { pattern: /^thigh(_\d+)?_bsm$/i, custom: 'thigh_bsm', numbered: (n) => `thigh_${n}_bsm` },
   { pattern: /^arm(_\d+)?_bsm$/i, custom: 'arm_bsm', numbered: (n) => `arm_${n}_bsm` },
+  { pattern: /^head_color(_[wyordb])?$/i, custom: 'head_color', numbered: (n) => `head_color_${HEAD_COLORS[n - 1]}` },
 ];
 
 /** Which skin-colored texture a reference is ({ custom, numbered(n) }), or null. */

@@ -744,6 +744,39 @@ button.player:hover {
   text-align: right;
 }
 
+/* the face editor: replaces the details pane's sections while it's open */
+#faceEditor, #details.face-editing > section:not(#faceEditor) {
+  display: none;
+}
+
+#details.face-editing > #faceEditor {
+  display: block;
+}
+
+#openFaceEditor {
+  margin-top: 8px;
+}
+
+.face-editor-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.face-editor-head h2 {
+  margin: 0;
+}
+
+.face-editor-head button {
+  padding: 2px 10px;
+}
+
+#faceSliders h3 {
+  font: 600 12px var(--display);
+  color: var(--muted);
+  margin: 14px 0 4px;
+}
+
 /* the export's team in the save file */
 .save-link {
   padding: 10px 16px 12px;

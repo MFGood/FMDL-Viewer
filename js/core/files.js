@@ -190,9 +190,9 @@ export const kitOfModel = (path) => listedModels.get(normPath(path).toLowerCase(
  * with glove_l / glove_r.mtl, else materials.mtl). A boots folder has no .xml: the game loads its boots.model,
  * with boots.mtl. Hair is the other exception: a face folder's hair_*.model files are always loaded, unless
  * the folder has a hair.xml, which then decides like any other .xml. They use the folder's hair.mtl, else its
- * face.mtl.
+ * face.mtl. Entries for the viewer's own default .model files come in `defaults`.
  */
-export async function readModelLists() {
+export async function readModelLists(defaults = []) {
   const lists = new Map(), problems = [];
   for (const xml of allPaths().filter((p) => /\.xml$/i.test(p))) {
     let entries;
@@ -225,6 +225,7 @@ export async function readModelLists() {
     }
   }
   const add = (entry) => { if (!lists.has(entry.path.toLowerCase())) lists.set(entry.path.toLowerCase(), { ...entry, xml: null }); };
+  defaults.forEach(add);
   for (const dir of gearFolders('boots')) {
     const inDir = (name) => index.real(`${dir}/${name}`);
     const path = inDir('boots.model');

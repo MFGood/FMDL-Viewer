@@ -14,7 +14,7 @@ import { state } from '../core/state.js';
 import { normPath, fileOf, scanExport } from '../formats/aet.js';
 import { linkSaveTeam } from '../export/save-team.js';
 import { readKitConfigs } from '../export/in-game.js';
-import { DEFAULTS, DEFAULT_FILES, playerSettings } from '../export/players.js';
+import { DEFAULTS, DEFAULT_FILES, DEFAULT_LISTINGS, playerSettings } from '../export/players.js';
 import { forgetTextures } from '../scene/textures.js';
 import { cameraView } from '../scene/framing.js';
 import { clearModels, loadModels, refreshMaterials, showNoModels } from '../viewer.js';
@@ -65,7 +65,7 @@ function playerToOpen() {
 async function openExport(label) {
   rebuildIndex();
   setStatus('Reading export…');
-  const listProblems = await readModelLists();
+  const listProblems = await readModelLists(DEFAULT_LISTINGS);
   state.aet = await scanExport(index, readText, isModelPath, modelsListedFor);
   if (state.aet) state.aet.kitConfigs = await readKitConfigs(state.aet);
   linkSaveTeam();
@@ -144,7 +144,7 @@ async function openLoose(files) {
     forgetTextures(path); // a newer copy of a texture already shown
   }
   rebuildIndex();
-  const listProblems = await readModelLists();
+  const listProblems = await readModelLists(DEFAULT_LISTINGS);
   if (!models.length) { await refreshMaterials(); return false; }
   const paths = models.map((f) => `${LOOSE}/${f.name}`), shown = paths.filter(isModelPath);
   markActive(null);
