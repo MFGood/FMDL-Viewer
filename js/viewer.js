@@ -13,6 +13,8 @@ import { parseMtl, attachMaterials } from './formats/mtl.js';
 import { dirOf, fileOf } from './formats/aet.js';
 import { isDefaultModel, viewedPlayer, setSetting, hiddenParts } from './export/players.js';
 import { pickCurrentKit, kitsAvailable } from './export/texture-lookup.js';
+import { savePlayerOf, skinToSave } from './export/save-team.js';
+import { keepSaveEdits } from './core/save.js';
 import { scene, boxLayer, boneLayer } from './scene/stage.js';
 import { buildGeometry, applyWeightScaling } from './scene/geometry.js';
 import { makeMaterial, clearAnimated, texturesNeeded } from './scene/materials.js';
@@ -170,8 +172,11 @@ export function stepKit(direction) {
 
 /** Skin colour for the viewed player (or for loose models). */
 export function selectSkin(n) {
-  const player = viewedPlayer();
-  if (player) setSetting(player, 'skin', n);
+  const player = viewedPlayer(), own = savePlayerOf(player);
+  if (own) {
+    skinToSave(own, n);
+    keepSaveEdits();
+  } else if (player) setSetting(player, 'skin', n);
   else state.looseSkin = n;
   refreshMaterials();
 }

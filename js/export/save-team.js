@@ -1,7 +1,7 @@
 // save-team.js — the open export's team in the loaded save file. The export's team name (the "Team:" line of
 // its note) is looked up among the save's teams; if it isn't there, or more than one team has it, the note's
 // "ID:" line is tried, then a team ID the user gives (remembered for that team name). Linked players show
-// their names from the save, and their body shape is the save's, edited in place.
+// their names from the save, and their body shape and skin colour are the save's, edited in place.
 
 import { state } from '../core/state.js';
 
@@ -54,6 +54,23 @@ function setLink(link) {
     player.name = (own && plainName(own.name)) || player.exportName;
   }
   return link;
+}
+
+/**
+ * A save player's skin colour as the viewer numbers it: 1–6 as in the game, 7 custom; null when unset (0).
+ * PES 18 on has no custom skin, so the reader loads a stored 7 as 0 with b_changed.
+ */
+export function skinFromSave(savePlayer) {
+  const n = savePlayer.b_changed && !savePlayer.skin_col ? 7 : savePlayer.skin_col;
+  return n >= 1 && n <= 7 ? n : null;
+}
+
+/** Set a save player's skin colour (1–7), the way the reader would have loaded it. */
+export function skinToSave(savePlayer, n) {
+  const custom = n === 7 && parseInt(state.save.parsed.pes) >= 18;
+  savePlayer.skin_col = custom ? 0 : n;
+  if (custom) savePlayer.b_changed = true;
+  else delete savePlayer.b_changed;
 }
 
 /**

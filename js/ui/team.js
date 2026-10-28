@@ -12,7 +12,7 @@ import { loadModels, showNoModels } from '../viewer.js';
 import { renderPlayerPanel } from './details.js';
 import { renderBodyPanel } from './body-shape.js';
 import { linkSaveTeam, useTeamId } from '../export/save-team.js';
-import { applyBodyShapeOption } from '../viewer.js';
+import { applyBodyShapeOption, refreshMaterials } from '../viewer.js';
 import { captureView } from '../open/opening.js';
 
 // ---------------------------------------------------------------- portraits
@@ -88,7 +88,7 @@ function renderSaveLink() {
   if (link.team && !changingTeam) {
     const change = el('button', { type: 'button', class: 'linkish' }, 'Change');
     change.addEventListener('click', () => { changingTeam = true; renderSaveLink(); $('saveTeamId').focus(); });
-    text.append(`Names and body shapes from ${link.team.name} (ID ${link.team.id}) in ${state.save.name}. `, change);
+    text.append(`Names, body shapes and skin colours from ${link.team.name} (ID ${link.team.id}) in ${state.save.name}. `, change);
     return;
   }
   const name = state.aet.teamName;
@@ -119,7 +119,7 @@ async function showSaveLink() {
   if (player) $('fileName').textContent = `${state.aet.teamName ? `${state.aet.teamName} · ` : ''}${playerTitle(player)}`;
   renderPlayerPanel();
   renderBodyPanel();
-  await applyBodyShapeOption();
+  await Promise.all([refreshMaterials(), applyBodyShapeOption()]);
 }
 
 /** Link the open export with the save file again (after either changes), and show it. */

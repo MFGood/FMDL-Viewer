@@ -5,6 +5,7 @@ import { options } from '../core/options.js';
 import { state } from '../core/state.js';
 import { listedModels } from '../core/files.js';
 import { stem } from '../formats/aet.js';
+import { savePlayerOf, skinFromSave } from './save-team.js';
 
 // ---------------------------------------------------------------- default boots and hands
 
@@ -140,7 +141,11 @@ export const skinTexture = (ref) => SKIN_TEXTURES.find((t) => t.pattern.test(ste
 export const usesSkin = (ref) => !!skinTexture(ref);
 
 /** The skin colour (1–7) chosen for a model's player, or for loose models when there's no player; null if none. */
-export const chosenSkin = (player) => (player ? settingsOf(player).skin : state.looseSkin) ?? null;
+export function chosenSkin(player) {
+  const own = savePlayerOf(player);
+  if (own) return skinFromSave(own);
+  return (player ? settingsOf(player).skin : state.looseSkin) ?? null;
+}
 
 // ---------------------------------------------------------------- hidden models and meshes
 
