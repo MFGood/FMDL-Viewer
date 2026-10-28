@@ -11,7 +11,7 @@ import { parseFmdl } from './formats/fmdl.js';
 import { parseModel } from './formats/model.js';
 import { parseMtl, attachMaterials } from './formats/mtl.js';
 import { dirOf, fileOf } from './formats/aet.js';
-import { isDefaultModel, viewedPlayer, setSetting, hiddenParts, DEFAULTS } from './export/players.js';
+import { isDefaultModel, viewedPlayer, setSetting, hiddenParts } from './export/players.js';
 import { pickCurrentKit, kitsAvailable } from './export/texture-lookup.js';
 import { savePlayerOf, skinToSave } from './export/save-team.js';
 import { inGameLook, hiddenInGame } from './export/in-game.js';
@@ -26,7 +26,7 @@ import { startRun, stopRun, rigged, wantRig, poseRun, applySkinWeights } from '.
 import { renderTree, renderMaterials, renderKits, renderSkins, renderPlayerPanel, renderStats } from './ui/details.js';
 import { renderBodyPanel } from './ui/body-shape.js';
 import { renderFacePanel, shownFace } from './ui/face-editor.js';
-import { FACE_MODEL, loadFaceData, isFaceHi, shapeFaceHi } from './animation/face-shape.js';
+import { facePartOf, loadFaceData, isFaceHi, shapeFaceHi, shapeFacePart } from './animation/face-shape.js';
 import { forgetFiles } from './open/opening.js';
 
 // ---------------------------------------------------------------- loading models
@@ -97,7 +97,7 @@ function addModel({ path, parsed }, player) {
     label: isDefaultModel(path) ? `${fileOf(path)} (default)` : fileOf(path),
     path, ownDir: dirOf(path), player, parsed, group: new THREE.Group(), visible: !hidden.model, hidden,
     kit: kitOfModel(path), // a kit-numbered model is only shown with its kit
-    editableFace: path === `${DEFAULTS}/${FACE_MODEL}`, // shaped by the player's face settings
+    facePart: isDefaultModel(path) ? facePartOf(path) : null, // the editable face and its parts follow the face settings
   };
   for (const mesh of parsed.meshes) {
     const obj = new THREE.Mesh(buildGeometry(mesh), new THREE.MeshStandardMaterial({ color: 0xb9c4bd }));
@@ -120,7 +120,7 @@ export async function loadModels(paths, label, player = null, notes = []) {
   const { loaded, problems } = await readModels(paths);
   problems.unshift(...notes);
   clearModels();
-  for (const item of loaded) if (item.path === `${DEFAULTS}/${FACE_MODEL}`) await shapeFace(item.parsed, player);
+  for (const item of loaded) if (isDefaultModel(item.path) && facePartOf(item.path)) await shapeFace(item.parsed, facePartOf(item.path), player);
   for (const item of loaded) addModel(item, player);
   $('fileName').textContent = label;
   if (wantRig()) await startRun();
@@ -139,21 +139,27 @@ export async function loadModels(paths, label, player = null, notes = []) {
   await refreshMaterials();
 }
 
-/** Shape the parsed editable face by a player's face settings (as modeled when their face isn't edited). */
-async function shapeFace(parsed, player) {
+/**
+ * Shape a parsed part of the editable face ("face", "eye"…) by a player's face settings (as modeled when their
+ * face isn't edited). The neck and back of the head don't move.
+ */
+async function shapeFace(parsed, part, player) {
   try { await loadFaceData(); }
   catch (e) { showError(`Couldn't load the face sliders: ${e.message}`); return false; }
-  if (!isFaceHi(parsed)) return false;
-  shapeFaceHi(parsed, shownFace(player));
+  if (part === 'face') {
+    if (!isFaceHi(parsed)) return false;
+    shapeFaceHi(parsed, shownFace(player));
+  } else if (part === 'eye' || part === 'mouth') shapeFacePart(parsed, part, shownFace(player));
+  else return false;
   return true;
 }
 
-/** Reshape the shown editable face after the player's face settings change, and redraw it. */
+/** Reshape the shown editable face and its parts after the player's face settings change, and redraw them. */
 export async function applyFaceShape() {
-  const model = state.models.find((m) => m.editableFace);
-  if (!model || !await shapeFace(model.parsed, model.player)) return;
+  const shaped = new Set();
+  for (const model of state.models) if (model.facePart && await shapeFace(model.parsed, model.facePart, model.player)) shaped.add(model);
   for (const m of state.meshObjects) {
-    if (m.model !== model) continue;
+    if (!shaped.has(m.model)) continue;
     const geometry = m.obj.geometry, positions = displayPositions(m.mesh.vertices);
     if (geometry.getAttribute('position').array !== positions) geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
     else geometry.getAttribute('position').needsUpdate = true;

@@ -15,7 +15,7 @@ import { frameFront } from '../scene/framing.js';
 import { applyFaceShape } from '../viewer.js';
 
 /** The loaded editable face, or null. */
-export const faceModel = () => state.models.find((m) => m.editableFace) || null;
+export const faceModel = () => state.models.find((m) => m.facePart === 'face') || null;
 
 /** A player's face settings: { edited (b_edit_face), face: { setting: 0–14 } }. */
 export function faceSettings(player) {

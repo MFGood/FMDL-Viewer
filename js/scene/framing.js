@@ -63,7 +63,7 @@ const shownMeshes = () => {
 };
 
 /** In the face editor, the editable face's shown meshes; else none. */
-const faceMeshes = () => (state.faceEditing ? state.meshObjects.filter((m) => m.model.editableFace && m.shown) : []);
+const faceMeshes = () => (state.faceEditing ? state.meshObjects.filter((m) => m.model.facePart === 'face' && m.shown) : []);
 
 /** Number of stray pieces among the meshes shown. */
 export const strayCount = () => (state.meshObjects.length ? mainBody(shownMeshes()).stray : 0);

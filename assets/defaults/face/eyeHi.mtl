@@ -1,0 +1,13 @@
+<materialset>
+	<material name="eye_mat" shader="Eye">
+		<sampler name="DiffuseMap"     path="./eye_color.dds"              srgb="1" minfilter="linear" magfilter="linear" />
+		<sampler name="NormalMap"      path="./eye_normal.dds"             srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<sampler name="SpecularMap"    path="./eye_specular_roughness.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<sampler name="TranslucentMap" path="./eye_translucent_height.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<sampler name="DiffuseMap2"    path="./eye_color_sub.dds"          srgb="1" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<sampler name="ViewEnvMap"     path="./eye_view_reflection.dds"    srgb="1" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<vector name="EyeColor" x="0.4" y="0.25" z="0.15" w="0.6" />
+		<vector name="EyeColorCenter" x="0.3" y="0.2" z="0.1" w="1" />
+		<vector name="EyeParam" x="20.0" y="500.0" z="0.15" w="2.0" />
+	</material>
+</materialset>

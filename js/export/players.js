@@ -7,7 +7,7 @@ import { listedModels } from '../core/files.js';
 import { stem } from '../formats/aet.js';
 import { savePlayerOf, skinFromSave } from './save-team.js';
 import { inGameLook } from './in-game.js';
-import { FACE_MODEL } from '../animation/face-shape.js';
+import { FACE_PARTS } from '../animation/face-shape.js';
 
 // ---------------------------------------------------------------- default boots and hands
 
@@ -23,19 +23,22 @@ export const DEFAULT_VERSIONS = { 17: 'PES 17', 21: 'PES 21' };
 /**
  * The default models and their textures, in assets/defaults/: a PES body without a head (boots.<version>.fmdl,
  * with kit, shoes and skin meshes) and hands (glove_l / glove_r.<version>.fmdl), with skin, thigh and arm
- * textures in skin colors 1–6; and PES 16's editable face (face/faceHi.model with face.mtl, its head_color
- * textures in the six skin colors, eyelashes and eye shadow).
+ * textures in skin colors 1–6; and PES 16's editable face with the game's eyes, mouth (teeth, gums and tongue),
+ * neck and back of the head (face/*Hi.model with their .mtl files), head_color textures in the six skin colors,
+ * eyelashes, eye shadow, eye and mouth textures, and their normal and specular maps.
  */
 export const DEFAULT_FILES = [
   ...Object.keys(DEFAULT_VERSIONS).flatMap((v) => [`boots.${v}.fmdl`, `glove_l.${v}.fmdl`, `glove_r.${v}.fmdl`]),
   'shoes_bsm.jpg',
   ...[1, 2, 3, 4, 5, 6].flatMap((n) => [`skin_color_${n}.jpg`, `thigh_${n}_bsm.jpg`, `arm_${n}_bsm.jpg`]),
-  FACE_MODEL, 'face/face.mtl', 'face/face_eyelash.dds', 'face/EyeOcclusion01.dds',
+  ...FACE_PARTS.flatMap((p) => [p.model, p.mtl]).filter((f, i, all) => all.indexOf(f) === i),
+  'face/face_eyelash.dds', 'face/EyeOcclusion01.dds', 'face/eye_color.dds', 'face/eye_color_sub.dds', 'face/oral_color.dds',
+  ...['face_normal', 'head_normal_default', 'eye_normal', 'eye_specular_roughness', 'oral_normal', 'oral_specular', 'oral_roughness'].map((n) => `face/${n}.dds`),
   ...HEAD_COLORS.map((c) => `face/head_color_${c}.dds`),
 ];
 
-/** The default .model files' list entries for readModelLists: the editable face with its face.mtl. */
-export const DEFAULT_LISTINGS = [{ path: `${DEFAULTS}/${FACE_MODEL}`, mtl: `${DEFAULTS}/face/face.mtl`, type: 'face' }];
+/** The default .model files' list entries for readModelLists: the editable face's parts with their .mtl files. */
+export const DEFAULT_LISTINGS = FACE_PARTS.map((p) => ({ path: `${DEFAULTS}/${p.model}`, mtl: `${DEFAULTS}/${p.mtl}`, type: p.type }));
 
 export const isDefaultModel = (path) => path.startsWith(`${DEFAULTS}/`);
 
@@ -115,19 +118,25 @@ const FACE_TYPES = ['face_neck', 'face'];
 /** Whether a player's face folder has a face model of its own, standing in for the game's editable face. */
 export const hasOwnFace = (p) => listedTypes(p).some((t) => FACE_TYPES.includes(t.type));
 
+/** Whether a player's face folder lists a model of this .xml type ("eye", "mouth"). */
+const hasOwnType = (p, type) => listedTypes(p).some((t) => t.type === type.toLowerCase());
+
 /**
  * Which default models a player would get: { boots, left, right, hands, face } (hands: either hand). Defaults
  * complete a player's own models, so a player with none (portrait only) gets nothing. The body is added for
  * any player with models, and each hand when they have a face model but no model of that hand (and, linked
  * to the save, the game shows the default hands). A Pre-Fox player without a face model of their own gets the
- * game's editable face, which their face settings shape.
+ * game's editable face, which their face settings shape, with its neck and back of the head, and its eyes and
+ * mouth unless their face folder has its own (face: the list of those parts).
  */
 export function defaultParts(p) {
-  if (!p || p.collars) return { boots: false, left: false, right: false, hands: false, face: false };
+  if (!p || p.collars) return { boots: false, left: false, right: false, hands: false, face: [] };
   const boots = !!(p.face?.fmdls.length || p.boots?.fmdls.length || p.gloves?.fmdls.length);
   const own = ownHands(p), face = boots && !!p.face?.fmdls.length && (inGameLook(p)?.hands ?? true);
   const left = face && !own.left, right = face && !own.right;
-  return { boots, left, right, hands: left || right, face: boots && isPreFox(p.fmdls) && !hasOwnFace(p) };
+  const editable = boots && isPreFox(p.fmdls) && !hasOwnFace(p);
+  const faceParts = editable ? FACE_PARTS.filter((f) => !f.ownType || !hasOwnType(p, f.ownType)) : [];
+  return { boots, left, right, hands: left || right, face: faceParts };
 }
 
 /** The .fmdl / .model paths to show for an export player: their own, plus the defaults they get. */
@@ -137,7 +146,7 @@ export function modelsFor(p) {
   if (parts.boots) extra.push(defaultModel('boots', prefox));
   if (parts.left) extra.push(defaultModel('glove_l', prefox));
   if (parts.right) extra.push(defaultModel('glove_r', prefox));
-  if (parts.face) extra.push(`${DEFAULTS}/${FACE_MODEL}`);
+  for (const part of parts.face) extra.push(`${DEFAULTS}/${part.model}`);
   return [...p.fmdls, ...extra];
 }
 

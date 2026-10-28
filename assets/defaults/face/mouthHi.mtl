@@ -1,0 +1,8 @@
+<materialset>
+  <material name="oral_mat" shader="FoxDefault">
+    <sampler name="DiffuseMap" path="./oral_color.dds" srgb="1" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp"/>
+    <sampler name="NormalMap" path="./oral_normal.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+    <sampler name="SpecularMap" path="./oral_specular.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+    <sampler name="RoughnessMap" path="./oral_roughness.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+  </material>
+</materialset>

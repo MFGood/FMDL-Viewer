@@ -1,0 +1,9 @@
+<materialset>
+	<material name="head_animation_mat" shader="Wrinkle">
+		<!-- The game gives the head and neck the face's skin texture (head_color_*, by skin color) at runtime. -->
+		<sampler name="DiffuseMap" path="./head_color_w.dds" srgb="1" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp"/>
+		<sampler name="NormalMap" path="./head_normal_default.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<sampler name="Normal2" path="./head_normal_animation.dds" srgb="0" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+		<sampler name="Mapping" path="./head_normal_mask.dds" srgb="1" minfilter="linear" magfilter="linear" uaddr="clamp" vaddr="clamp" />
+	</material>
+</materialset>
