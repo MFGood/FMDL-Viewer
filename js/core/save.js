@@ -2,22 +2,15 @@
 // Its bytes are kept in IndexedDB, which allows far more than localStorage, so it's read again on the
 // next visit.
 
-import { openDB } from 'idb';
 import { SaveFile } from '../formats/pes_save.js';
+import { database } from './db.js';
 import { state } from './state.js';
 
 const STORE = 'saves';
 const KEY = 'current';  // one save at a time: { name, bytes, savedAt }
 
-let db = null;
 // Bumped by openSave and forgetSave, so a restore still under way doesn't undo them.
 let generation = 0;
-function database() {
-  db ??= openDB('fmdl-viewer', 1, {
-    upgrade(database) { database.createObjectStore(STORE); },
-  }).catch((e) => { db = null; throw e; });
-  return db;
-}
 
 /** Parse save bytes, throwing if they aren't a PES 15–21 save. */
 async function parse(name, bytes) {

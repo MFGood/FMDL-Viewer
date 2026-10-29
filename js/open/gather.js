@@ -88,8 +88,31 @@ export function droppedBatch(dataTransfer) {
   })();
 }
 
+/** A batch from a folder handle (picked with showDirectoryPicker, or remembered from an earlier visit). */
+export const folderBatch = (handle) => ({ label: handle.name, drop: { handles: [handle], entries: [], files: [] } });
+
+/** The folder a batch is, when it's one folder the browser gave a handle for (which can be kept), or null. */
+export function folderHandle(batch) {
+  const handles = batch.drop?.handles;
+  return handles?.length === 1 && handles[0].kind === 'directory' ? handles[0] : null;
+}
+
+/**
+ * Whether the browser will read the files of a folder handle it gave. Some won't (the Claude app's browser
+ * pane: getFile isn't allowed there). Looks as far as the first file.
+ */
+export async function canReadFolder(handle) {
+  try {
+    for await (const child of handle.values()) {
+      if (child.kind === 'file') { await child.getFile(); return true; }
+      if (await canReadFolder(child)) return true;
+    }
+    return true; // no files to read
+  } catch { return false; }
+}
+
 /** Whether the batch has a folder in it (reading those takes a moment). */
-export const hasFolder = (batch) => !!batch.drop?.entries.some((e) => e.isDirectory);
+export const hasFolder = (batch) => !!(batch.drop?.handles?.some((h) => h.kind === 'directory') || batch.drop?.entries.some((e) => e.isDirectory));
 
 /**
  * What a batch is, for spotting that the same thing was opened again: the names of the archives and top

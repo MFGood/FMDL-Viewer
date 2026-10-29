@@ -11,8 +11,9 @@ import {
 } from '../core/files.js';
 import { setStatus, flashStatus, showError, hideError, forgetDismissedErrors } from '../core/notices.js';
 import { state } from '../core/state.js';
+import { database } from '../core/db.js';
 import { FileIndex, normPath, fileOf, scanExport, findRoots } from '../formats/aet.js';
-import { linkSaveTeam, isSaveTeamName } from '../export/save-team.js';
+import { linkSaveTeam } from '../export/save-team.js';
 import { readKitConfigs } from '../export/in-game.js';
 import { DEFAULTS, DEFAULT_FILES, DEFAULT_LISTINGS, playerSettings } from '../export/players.js';
 import { forgetTextures } from '../scene/textures.js';
@@ -20,7 +21,7 @@ import { cameraView } from '../scene/framing.js';
 import { clearModels, loadModels, refreshMaterials, showNoModels } from '../viewer.js';
 import { renderTeam, markActive, openPlayer, forgetPortraits } from '../ui/team.js';
 import { readZip, readWith7zip } from './archives.js';
-import { batchFiles, batchKey, isArchive, hasFolder } from './gather.js';
+import { batchFiles, batchKey, isArchive, hasFolder, folderBatch, folderHandle } from './gather.js';
 
 // ---------------------------------------------------------------- the viewer's own files
 
@@ -166,40 +167,43 @@ let teams = [];       // the exports of what's open, when it has more than one: 
 let teamKey = null;   // the one shown
 const teamSettings = new Map(); // team key -> its players' settings, kept while another team is shown
 
-/** The first word of a file name ("a" for "a 2026.zip"). */
-const firstWord = (name) => name.replace(/\.[^.]*$/, '').split(/[\s_-]+/)[0];
-
 /**
- * The exports in a batch's files: archives opened on their own, and in folders, each folder holding a
- * Kit Textures folder (findRoots) and each archive whose name's first word is a team name in the save
- * (isSaveTeamName), as such a folder can also hold old exports archived. Returns { found, skipped }, skipped
- * being the archives in folders left out.
+ * The exports in a batch's files, by name: every archive (opened on its own or in a folder), and each folder
+ * holding a Kit Textures folder (findRoots).
  */
 function teamsIn(items) {
   const inFolder = items.filter((i) => i.path && !isArchive(i.file));
-  const archives = items.filter((i) => isArchive(i.file));
-  const skipped = archives.filter((i) => i.path && !isSaveTeamName(firstWord(i.file.name)));
-  const found = archives.filter((i) => !skipped.includes(i))
+  const found = items.filter((i) => isArchive(i.file))
     .map((i) => ({ key: `archive:${(i.path || i.file.name).toLowerCase()}`, label: i.file.name, archive: i.file }));
   for (const root of findRoots(new FileIndex(inFolder.map((i) => i.path)))) {
     const under = inFolder.filter((i) => !root || normPath(i.path).toLowerCase().startsWith(`${root.toLowerCase()}/`));
     found.push({ key: `folder:${root.toLowerCase()}`, label: fileOf(root) || under[0].path.split('/')[0], items: under });
   }
-  found.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
-  return { found, skipped };
+  return found.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
-/** The team selector in the header, shown while more than one export is open. */
+/**
+ * The team selector in the header, shown while more than one export is open, or listing the teams of the
+ * folder remembered from the last visit until one is picked.
+ */
 function renderTeamSelect() {
   const select = $('teamSelect');
   select.hidden = teams.length < 2;
   select.textContent = '';
+  if (remembered) select.append(el('option', { value: '', disabled: '' }, `${remembered.name}: pick a team`));
   for (const team of teams) select.append(el('option', { value: team.key }, team.label));
   select.value = teamKey ?? '';
 }
 
+function clearTeams() {
+  teams = [];
+  teamKey = remembered = null;
+  renderTeamSelect();
+}
+
 async function openTeam(team) {
   teamKey = team.key;
+  remembered = null;
   renderTeamSelect();
   $('teamSelect').disabled = true;
   try { await (team.archive ? openArchive(team.archive) : openFolder(team.items, team.label)); }
@@ -210,6 +214,7 @@ async function openTeam(team) {
 async function switchTeam(key) {
   const team = teams.find((t) => t.key === key);
   if (!team || key === teamKey) return;
+  if (remembered) return openRemembered(key);
   forgetDismissedErrors();
   hideError();
   teamSettings.set(teamKey, new Map(playerSettings));
@@ -225,30 +230,63 @@ $('teamSelect').addEventListener('change', (e) => switchTeam(e.target.value));
  * With more than one export among them, the one keyed `keepTeam` is shown if it's there, else the first.
  */
 async function openItems(items, label, keepTeam = null) {
-  const { found, skipped } = teamsIn(items);
+  const found = teamsIn(items);
   const inFolder = items.filter((i) => i.path && !isArchive(i.file));
   if (found.length > 1) {
     teams = found;
     await openTeam(found.find((t) => t.key === keepTeam) || found[0]);
     return true;
   }
-  if (found.length || inFolder.length) { teams = []; teamKey = null; renderTeamSelect(); }
+  if (found.length || inFolder.length) clearTeams();
   if (found[0]?.archive) {
     await openArchive(found[0].archive);
     return true;
   }
-  if (inFolder.length || skipped.length) {
-    label ||= (inFolder[0] || skipped[0]).path.split('/')[0];
-    if (inFolder.length) await openFolder(inFolder, label);
-    if (skipped.length && (!state.aet || !inFolder.length)) {
-      const names = skipped.slice(0, 3).map((i) => i.file.name).join(', ') + (skipped.length > 3 ? '…' : '');
-      showError(`${label} has no export folder. Archives in a folder (${names}) are only opened when their name starts with a team name from the save file${state.save ? '' : ', and no save file is loaded (Settings)'}.`);
-    }
-    return inFolder.length > 0;
+  if (inFolder.length) {
+    await openFolder(inFolder, label || inFolder[0].path.split('/')[0]);
+    return true;
   }
-  const replaced = await openLoose(items.filter((i) => !isArchive(i.file)).map((i) => i.file));
-  if (replaced && teams.length) { teams = []; teamKey = null; renderTeamSelect(); }
+  const replaced = await openLoose(items.map((i) => i.file));
+  if (replaced && teams.length) clearTeams();
   return replaced;
+}
+
+// ---------------------------------------------------------------- the folder remembered for the next visit
+
+// The last folder opened with a handle (Open export folder… where the browser has showDirectoryPicker, or a
+// dropped folder), kept in IndexedDB with its teams, so the next visit's team selector lists them. Reading it
+// again needs the user's permission, asked for when a team is picked.
+const FOLDERS = 'folders', LAST_FOLDER = 'last'; // { handle, teams: [{ key, label }] }
+let remembered = null; // its handle, while the team selector lists its teams and none is open yet
+
+async function rememberFolder(handle) {
+  const kept = { handle, teams: teams.map(({ key, label }) => ({ key, label })) };
+  try { await (await database()).put(FOLDERS, kept, LAST_FOLDER); }
+  catch (e) { console.warn("Couldn't remember the folder in the browser:", e); }
+}
+
+/** List the teams of the folder remembered from the last visit in the team selector, if it had more than one. */
+export async function restoreFolder() {
+  let kept;
+  try { kept = await (await database()).get(FOLDERS, LAST_FOLDER); } catch { return; }
+  if (!kept || kept.teams.length < 2 || openKey || teams.length) return; // or something was opened meanwhile
+  teams = kept.teams;
+  teamKey = null;
+  remembered = kept.handle;
+  renderTeamSelect();
+}
+
+/** Open a team of the remembered folder, once the browser allows reading it again. */
+async function openRemembered(key) {
+  const handle = remembered;
+  let allowed = false;
+  try { allowed = await handle.requestPermission({ mode: 'read' }) === 'granted'; } catch { /* no longer there */ }
+  if (!allowed) {
+    renderTeamSelect();
+    showError(`The browser didn't allow reading ${handle.name} again. Open it with Open export folder… or drop it here.`);
+    return;
+  }
+  await openBatch(folderBatch(handle), key);
 }
 
 // ---------------------------------------------------------------- batches and reloading
@@ -266,8 +304,8 @@ export function captureView() {
   };
 }
 
-/** Open a dropped or picked batch. */
-export async function openBatch(batch) {
+/** Open a dropped or picked batch; with more than one export in it, the one keyed `team` if it's there. */
+export async function openBatch(batch, team = null) {
   if (!batch) return;
   if (!state.pendingRestore) forgetDismissedErrors(); // a reload does this itself
   if (hasFolder(batch)) setStatus('Reading folder…');
@@ -281,13 +319,15 @@ export async function openBatch(batch) {
   const reopening = !state.pendingRestore && key && key === openKey && state.models.length > 0;
   if (reopening) state.pendingRestore = captureView();
   let replaced;
-  try { replaced = await openItems(items, batch.label, key && key === openKey ? teamKey : null); }
+  try { replaced = await openItems(items, batch.label, team ?? (key && key === openKey ? teamKey : null)); }
   finally { if (reopening) state.pendingRestore = null; }
 
   if (replaced) {
     if (key !== openKey) { playerSettings.clear(); teamSettings.clear(); } // a different export
     openBatches = [batch];
     openKey = key;
+    const folder = folderHandle(batch);
+    if (folder) rememberFolder(folder);
   } else openBatches.push(batch);
   $('reload').disabled = false;
   if (reopening) flashStatus('Same files as before: kept your player, kit and view');

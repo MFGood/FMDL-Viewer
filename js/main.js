@@ -21,10 +21,11 @@ import {
 import { renderTeam, playablePlayers, stepPlayer, reloadForDefaults } from './ui/team.js';
 import { renderPlayerPanel } from './ui/details.js';
 import { initSettings, loadSave } from './ui/settings.js';
-import { openBatch, reload, canReload, openSample } from './open/opening.js';
-import { pickedBatch, droppedBatch, batchFiles } from './open/gather.js';
+import { openBatch, reload, canReload, openSample, restoreFolder } from './open/opening.js';
+import { pickedBatch, droppedBatch, batchFiles, folderBatch, canReadFolder } from './open/gather.js';
 
 initNotices();
+restoreFolder(); // before the save, so its teams aren't listed only once the save is read
 initSettings();
 makeGrid();
 
@@ -70,6 +71,23 @@ $('tPlayerDefaults').addEventListener('change', async () => {
 const openPicked = (input) => { openBatch(pickedBatch(input.files)); input.value = ''; };
 $('fileInput').addEventListener('change', (e) => openPicked(e.target));
 $('folderInput').addEventListener('change', (e) => openPicked(e.target));
+
+// Where the browser can, pick the folder with a handle instead, which can be remembered for the next visit
+// (see rememberFolder). Some won't read the handle they give (the Claude app's browser pane), so then it's
+// the plain folder input.
+let folderHandlesWork = true;
+$('folderInput').closest('label').addEventListener('click', async (e) => {
+  if (!window.showDirectoryPicker || !folderHandlesWork) return;
+  e.preventDefault();
+  let handle;
+  try { handle = await showDirectoryPicker({ id: 'exports' }); } catch { return; } // cancelled
+  if (!await canReadFolder(handle)) {
+    folderHandlesWork = false;
+    $('folderInput').click();
+    return;
+  }
+  openBatch(folderBatch(handle));
+});
 $('reload').addEventListener('click', reload);
 $('resetView').addEventListener('click', frameModel);
 
