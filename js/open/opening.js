@@ -265,15 +265,30 @@ async function rememberFolder(handle) {
   catch (e) { console.warn("Couldn't remember the folder in the browser:", e); }
 }
 
-/** List the teams of the folder remembered from the last visit in the team selector, if it had more than one. */
+/**
+ * List the teams of the folder remembered from the last visit in the team selector, if it had more than one.
+ * Where the browser still allows reading the folder (Chrome's "allow on every visit"), it's looked through
+ * again first, so the list is what's in it now.
+ */
 export async function restoreFolder() {
   let kept;
   try { kept = await (await database()).get(FOLDERS, LAST_FOLDER); } catch { return; }
-  if (!kept || kept.teams.length < 2 || openKey || teams.length) return; // or something was opened meanwhile
-  teams = kept.teams;
+  if (!kept || openKey || teams.length) return; // or something was opened meanwhile
+  const { handle } = kept;
+  let current = null;
+  try {
+    if (await handle.queryPermission({ mode: 'read' }) === 'granted') {
+      current = teamsIn(await batchFiles(folderBatch(handle))).map(({ key, label }) => ({ key, label }));
+    }
+  } catch { /* gone or unreadable: list what was there */ }
+  if (openKey || teams.length) return;
+  const list = current || kept.teams;
+  if (list.length < 2) return;
+  teams = list;
   teamKey = null;
-  remembered = kept.handle;
+  remembered = handle;
   renderTeamSelect();
+  if (current) rememberFolder(handle);
 }
 
 /** Open a team of the remembered folder, once the browser allows reading it again. */
