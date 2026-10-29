@@ -162,6 +162,21 @@ h1 span {
   flex: 1 1 120px;
 }
 
+#teamSelect {
+  font: 500 14px var(--body);
+  border: 1px solid var(--line);
+  background: var(--bg);
+  color: var(--fg);
+  padding: 5px 8px;
+  border-radius: 6px;
+  max-width: 220px;
+  min-width: 0;
+}
+
+#teamSelect[hidden] {
+  display: none;
+}
+
 button, .btn {
   font: 500 14px var(--body);
   border: 1px solid var(--line);

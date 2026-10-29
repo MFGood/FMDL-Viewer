@@ -40,7 +40,8 @@ export function readKitConfig(bytes, name = '') {
 /** The export's kit configs by kit: Map kit id → config. */
 export async function readKitConfigs(aet) {
   const configs = new Map();
-  for (const path of index.filesIn(aet?.kitConfigDir).filter((p) => /\.bin$/i.test(p))) {
+  if (!aet?.kitConfigDir) return configs;
+  for (const path of index.filesIn(aet.kitConfigDir).filter((p) => /\.bin$/i.test(p))) {
     try {
       const config = readKitConfig(await readFile(path), stem(path));
       if (config.kit && !configs.has(config.kit)) configs.set(config.kit, config);

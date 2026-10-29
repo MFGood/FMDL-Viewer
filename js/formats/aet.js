@@ -86,7 +86,22 @@ export function findRoot(index) {
   return best ? best.path : fallback ? fallback.path : null;
 }
 
-const cleanName = (s) => s.replace(/\s+/g, ' ').trim();
+/**
+ * Every export in the files: the folders holding "Kit Textures", leaving out any inside another one; failing
+ * that, findRoot's folder.
+ */
+export function findRoots(index) {
+  const roots = [];
+  const withKits = [...index.dirs.values()].filter((e) => e.subdirs.has('kit textures')).map((e) => e.path).sort((a, b) => a.length - b.length);
+  for (const dir of withKits) {
+    if (!roots.some((root) => root === '' || dir.toLowerCase().startsWith(`${root.toLowerCase()}/`))) roots.push(dir);
+  }
+  if (roots.length) return roots;
+  const root = findRoot(index);
+  return root === null ? [] : [root];
+}
+
+const cleanName =(s) => s.replace(/\s+/g, ' ').trim();
 
 /** Roster slot (1–24) for a 4-digit boots/gloves ID, or null if it isn't in a player block. */
 export function gearSlot(id) {

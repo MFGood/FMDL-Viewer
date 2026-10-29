@@ -92,14 +92,14 @@ export function droppedBatch(dataTransfer) {
 export const hasFolder = (batch) => !!batch.drop?.entries.some((e) => e.isDirectory);
 
 /**
- * What a batch is, for spotting that the same thing was opened again: the archive's name, the top
- * folder's name, or the set of .fmdl / .model names for loose models. Textures on their own have no key.
+ * What a batch is, for spotting that the same thing was opened again: the names of the archives and top
+ * folders, or the set of .fmdl / .model names for loose models. Textures on their own have no key.
  */
 export function batchKey(items) {
-  const archive = items.find((i) => ARCHIVE.test(i.file.name));
-  if (archive) return `archive:${archive.file.name.toLowerCase()}`;
-  const inFolder = items.find((i) => i.path);
-  if (inFolder) return `folder:${inFolder.path.split('/')[0].toLowerCase()}`;
+  const archives = items.filter((i) => !i.path && ARCHIVE.test(i.file.name)).map((i) => `archive:${i.file.name.toLowerCase()}`);
+  const folders = items.filter((i) => i.path).map((i) => `folder:${i.path.split('/')[0].toLowerCase()}`);
+  const opened = [...new Set([...archives, ...folders])].sort();
+  if (opened.length) return opened.join('|');
   const models = items.filter((i) => /\.(fmdl|model)$/i.test(i.file.name)).map((i) => i.file.name.toLowerCase()).sort();
   return models.length ? `loose:${models.join('|')}` : null;
 }

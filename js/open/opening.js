@@ -4,15 +4,15 @@
 // top. Reload (and opening the same thing again) reopens everything while keeping the player, kit and
 // camera.
 
-import { $ } from '../core/dom.js';
+import { $, el } from '../core/dom.js';
 import {
   LOOSE, index, addSource, removeSources, clearSources, rebuildIndex, allPaths, readText, isGone, fetchAsset,
   readModelLists, isModelPath, modelsListedFor,
 } from '../core/files.js';
 import { setStatus, flashStatus, showError, hideError, forgetDismissedErrors } from '../core/notices.js';
 import { state } from '../core/state.js';
-import { normPath, fileOf, scanExport } from '../formats/aet.js';
-import { linkSaveTeam } from '../export/save-team.js';
+import { FileIndex, normPath, fileOf, scanExport, findRoots } from '../formats/aet.js';
+import { linkSaveTeam, isSaveTeamName } from '../export/save-team.js';
 import { readKitConfigs } from '../export/in-game.js';
 import { DEFAULTS, DEFAULT_FILES, DEFAULT_LISTINGS, playerSettings } from '../export/players.js';
 import { forgetTextures } from '../scene/textures.js';
@@ -158,19 +158,97 @@ async function openLoose(files) {
   return true;
 }
 
-/** Open a batch's files. Returns false if they were textures on their own (added, not replacing). */
-async function openItems(items, label) {
-  const archive = items.map((i) => i.file).find(isArchive);
-  if (archive) {
-    await (/\.zip$/i.test(archive.name) ? openZip(archive) : openWith7zip(archive));
+const openArchive = (file) => (/\.zip$/i.test(file.name) ? openZip(file) : openWith7zip(file));
+
+// ---------------------------------------------------------------- several teams at once
+
+let teams = [];       // the exports of what's open, when it has more than one: [{ key, label, archive | items }]
+let teamKey = null;   // the one shown
+const teamSettings = new Map(); // team key -> its players' settings, kept while another team is shown
+
+/** The first word of a file name ("a" for "a 2026.zip"). */
+const firstWord = (name) => name.replace(/\.[^.]*$/, '').split(/[\s_-]+/)[0];
+
+/**
+ * The exports in a batch's files: archives opened on their own, and in folders, each folder holding a
+ * Kit Textures folder (findRoots) and each archive whose name's first word is a team name in the save
+ * (isSaveTeamName), as such a folder can also hold old exports archived. Returns { found, skipped }, skipped
+ * being the archives in folders left out.
+ */
+function teamsIn(items) {
+  const inFolder = items.filter((i) => i.path && !isArchive(i.file));
+  const archives = items.filter((i) => isArchive(i.file));
+  const skipped = archives.filter((i) => i.path && !isSaveTeamName(firstWord(i.file.name)));
+  const found = archives.filter((i) => !skipped.includes(i))
+    .map((i) => ({ key: `archive:${(i.path || i.file.name).toLowerCase()}`, label: i.file.name, archive: i.file }));
+  for (const root of findRoots(new FileIndex(inFolder.map((i) => i.path)))) {
+    const under = inFolder.filter((i) => !root || normPath(i.path).toLowerCase().startsWith(`${root.toLowerCase()}/`));
+    found.push({ key: `folder:${root.toLowerCase()}`, label: fileOf(root) || under[0].path.split('/')[0], items: under });
+  }
+  found.sort((a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }));
+  return { found, skipped };
+}
+
+/** The team selector in the header, shown while more than one export is open. */
+function renderTeamSelect() {
+  const select = $('teamSelect');
+  select.hidden = teams.length < 2;
+  select.textContent = '';
+  for (const team of teams) select.append(el('option', { value: team.key }, team.label));
+  select.value = teamKey ?? '';
+}
+
+async function openTeam(team) {
+  teamKey = team.key;
+  renderTeamSelect();
+  $('teamSelect').disabled = true;
+  try { await (team.archive ? openArchive(team.archive) : openFolder(team.items, team.label)); }
+  finally { $('teamSelect').disabled = false; }
+}
+
+/** Show another of the open exports, each keeping its players' settings. */
+async function switchTeam(key) {
+  const team = teams.find((t) => t.key === key);
+  if (!team || key === teamKey) return;
+  forgetDismissedErrors();
+  hideError();
+  teamSettings.set(teamKey, new Map(playerSettings));
+  playerSettings.clear();
+  for (const [player, settings] of teamSettings.get(key) || []) playerSettings.set(player, settings);
+  await openTeam(team);
+}
+
+$('teamSelect').addEventListener('change', (e) => switchTeam(e.target.value));
+
+/**
+ * Open a batch's files. Returns false if they were textures on their own (added, not replacing).
+ * With more than one export among them, the one keyed `keepTeam` is shown if it's there, else the first.
+ */
+async function openItems(items, label, keepTeam = null) {
+  const { found, skipped } = teamsIn(items);
+  const inFolder = items.filter((i) => i.path && !isArchive(i.file));
+  if (found.length > 1) {
+    teams = found;
+    await openTeam(found.find((t) => t.key === keepTeam) || found[0]);
     return true;
   }
-  const inFolder = items.filter((i) => i.path);
-  if (inFolder.length) {
-    await openFolder(inFolder, label || inFolder[0].path.split('/')[0]);
+  if (found.length || inFolder.length) { teams = []; teamKey = null; renderTeamSelect(); }
+  if (found[0]?.archive) {
+    await openArchive(found[0].archive);
     return true;
   }
-  return openLoose(items.map((i) => i.file));
+  if (inFolder.length || skipped.length) {
+    label ||= (inFolder[0] || skipped[0]).path.split('/')[0];
+    if (inFolder.length) await openFolder(inFolder, label);
+    if (skipped.length && (!state.aet || !inFolder.length)) {
+      const names = skipped.slice(0, 3).map((i) => i.file.name).join(', ') + (skipped.length > 3 ? '…' : '');
+      showError(`${label} has no export folder. Archives in a folder (${names}) are only opened when their name starts with a team name from the save file${state.save ? '' : ', and no save file is loaded (Settings)'}.`);
+    }
+    return inFolder.length > 0;
+  }
+  const replaced = await openLoose(items.filter((i) => !isArchive(i.file)).map((i) => i.file));
+  if (replaced && teams.length) { teams = []; teamKey = null; renderTeamSelect(); }
+  return replaced;
 }
 
 // ---------------------------------------------------------------- batches and reloading
@@ -203,11 +281,11 @@ export async function openBatch(batch) {
   const reopening = !state.pendingRestore && key && key === openKey && state.models.length > 0;
   if (reopening) state.pendingRestore = captureView();
   let replaced;
-  try { replaced = await openItems(items, batch.label); }
+  try { replaced = await openItems(items, batch.label, key && key === openKey ? teamKey : null); }
   finally { if (reopening) state.pendingRestore = null; }
 
   if (replaced) {
-    if (key !== openKey) playerSettings.clear(); // a different export
+    if (key !== openKey) { playerSettings.clear(); teamSettings.clear(); } // a different export
     openBatches = [batch];
     openKey = key;
   } else openBatches.push(batch);

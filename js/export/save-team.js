@@ -17,6 +17,12 @@ const namedTeams = () => Object.values(state.save?.parsed.teams || {}).filter((t
 /** The save's team with this ID, or null. */
 export const saveTeam = (id) => namedTeams().find((team) => String(team.id) === String(id).trim()) || null;
 
+/** Whether a word is the name of a team in the save, forward slashes left out ("a" for /a/). */
+export function isSaveTeamName(word) {
+  const bare = (name) => norm(name).replace(/\//g, '');
+  return !!bare(word) && namedTeams().some((team) => bare(team.name) === bare(word));
+}
+
 /** PES 15–17 saves go with Pre-Fox (.model) exports, PES 18–21 saves with Fox (.fmdl) ones. */
 export const preFoxSave = () => parseInt(state.save.parsed.pes) < 18;
 
