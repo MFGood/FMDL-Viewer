@@ -89,18 +89,19 @@ button.icon {
   padding: 6px 8px;
 }
 
-#settingsButton {
-  margin-left: auto; /* the right end of its row, also when the header wraps on phones */
+#captureButton {
+  margin-left: auto; /* with the cog, the right end of its row, also when the header wraps on phones */
 }
 
-button.icon[aria-expanded="true"] {
+button.icon[aria-expanded="true"], #checkButton[aria-expanded="true"] {
   background: var(--accent-soft);
   border-color: var(--accent);
 }
 
-/* Settings: laid exactly over the details pane (the last grid column), which keeps its scroll position
-   underneath; the viewport stays in view, so changes show as they're made. Full screen on phones. */
-#settings {
+/* Settings, capture and the export check: laid exactly over the details pane (the last grid column), which
+   keeps its scroll position underneath; the viewport stays in view, so changes show as they're made. Full
+   screen on phones. */
+.overlay-panel {
   position: absolute;
   grid-column: -2 / -1;
   grid-row: 1;
@@ -757,7 +758,7 @@ button.player:hover {
     border-right: 0;
     border-top: 1px solid var(--line);
   }
-  #settings {
+  .overlay-panel {
     position: fixed;
     z-index: 3;
     border-left: 0;
@@ -852,4 +853,114 @@ button.player:hover {
 
 #bodyNote {
   margin-top: 6px;
+}
+
+/* capture */
+.capture-size {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.capture-size input, label.field input {
+  font: 13px var(--mono);
+  padding: 4px 6px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--bg);
+  color: inherit;
+  min-width: 0;
+}
+
+.capture-size input {
+  width: 5.5em;
+}
+
+label.field {
+  display: grid;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+label.field input {
+  font: inherit;
+  color: var(--fg);
+}
+
+label.field input[aria-invalid="true"] {
+  border-color: var(--warn);
+}
+
+.hint.warn {
+  color: var(--warn);
+  margin: -4px 0 8px;
+}
+
+#captureSave {
+  width: 100%;
+  margin-bottom: 6px;
+}
+
+/* export check */
+.check-summary {
+  font: 500 14px var(--body);
+}
+
+.check-group {
+  margin-bottom: 14px;
+}
+
+.check-group > h3, .check-group > button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  font: 700 14px var(--display);
+  letter-spacing: .02em;
+  margin: 0 0 4px;
+}
+
+.check-group > h3 {
+  padding: 6px 0;
+}
+
+.check-group ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+}
+
+.issue {
+  font-size: 13px;
+  line-height: 1.35;
+  padding-left: 16px;
+  position: relative;
+  overflow-wrap: anywhere;
+}
+
+.issue::before {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: .45em;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.issue.error::before {
+  background: #d23c3c;
+}
+
+.issue.warn::before {
+  background: var(--warn);
+}
+
+#captureGrid .chk-row {
+  margin-bottom: 8px;
 }

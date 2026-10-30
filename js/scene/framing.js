@@ -39,12 +39,13 @@ function meshPieces(mesh, positions) {
 }
 
 /**
- * The main body: start from the piece with the most triangles and keep adding any piece within ~1 m
- * (or half the body's size, if larger) of what's gathered so far. Everything left over is stray.
+ * The main body of meshes given as { mesh, positions }: start from the piece with the most triangles and keep
+ * adding any piece within ~1 m (or half the body's size, if larger) of what's gathered so far. Everything left
+ * over is stray.
  */
-function mainBody(meshObjects) {
+export function mainBody(parts) {
   const pieces = [];
-  for (const m of meshObjects) pieces.push(...meshPieces(m.mesh, m.obj.geometry.getAttribute('position').array));
+  for (const { mesh, positions } of parts) pieces.push(...meshPieces(mesh, positions));
   if (!pieces.length) return { box: new THREE.Box3(), stray: 0 };
   pieces.sort((a, b) => b.tris - a.tris);
   const box = pieces[0].box.clone(), used = new Set([pieces[0]]);
@@ -57,6 +58,9 @@ function mainBody(meshObjects) {
   return { box, stray: pieces.length - used.size };
 }
 
+/** A mesh object's mesh with the positions it's drawn with. */
+const drawn = (m) => ({ mesh: m.mesh, positions: m.obj.geometry.getAttribute('position').array });
+
 const shownMeshes = () => {
   const shown = state.meshObjects.filter((m) => m.shown);
   return shown.length ? shown : state.meshObjects;
@@ -66,19 +70,19 @@ const shownMeshes = () => {
 const faceMeshes = () => (state.faceEditing ? state.meshObjects.filter((m) => m.model.facePart === 'face' && m.shown) : []);
 
 /** Number of stray pieces among the meshes shown. */
-export const strayCount = () => (state.meshObjects.length ? mainBody(shownMeshes()).stray : 0);
+export const strayCount = () => (state.meshObjects.length ? mainBody(shownMeshes().map(drawn)).stray : 0);
 
 /**
  * The box framing aims at: the shown meshes, leaving out stray pieces unless "Frame stray meshes" is on; in the
  * face editor, the face.
  */
-function framedBox() {
+export function framedBox() {
   const box = new THREE.Box3(), face = faceMeshes();
   if (face.length) {
     for (const m of face) { m.obj.geometry.computeBoundingBox(); box.union(m.obj.geometry.boundingBox); }
     return box;
   }
-  if (!options.frameStray) box.copy(mainBody(shownMeshes()).box);
+  if (!options.frameStray) box.copy(mainBody(shownMeshes().map(drawn)).box);
   else for (const m of shownMeshes()) { m.obj.geometry.computeBoundingBox(); box.union(m.obj.geometry.boundingBox); }
   return box;
 }

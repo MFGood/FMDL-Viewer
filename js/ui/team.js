@@ -140,6 +140,7 @@ export async function refreshSaveLink() {
 export async function renderTeam() {
   const { aet } = state;
   $('team').hidden = !aet;
+  $('checkButton').hidden = !aet;
   $('main').classList.toggle('has-team', !!aet);
   renderSaveLink();
   if (!aet) return;

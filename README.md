@@ -18,6 +18,8 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Body shape:** PES's 14 physique settings as sliders, scaling the skeleton the way PES 2016 does.
 - **Face editor:** Pre-Fox players without a face model of their own get PES 16's editable face, with its eyes, mouth, neck and head, and the edit hair their save settings pick when their face folder has no hair. With Edited face on (`b_edit_face` in the save), the face editor frames the face and turns the details pane into the game's face sliders, shaping the face, eyes and mouth the way PES 2016 does, followed by selectors for the hair, eyebrows, beard and skin details that the game paints onto the face.
 - **Settings:** the cog at the top right opens the global settings: display options, default models, a PES save file and navigation. They're remembered in the browser between visits.
+- **Export check:** **Check export** looks the open export over for problems and lists them per player: models that don't read, textures that are missing or unreadable or aren't a power of two in size, vertex weights that don't add up to 1, stray geometry, model names the game won't load, gear IDs with no roster slot, and a missing note, logo or kit config. **Copy report** copies the list as text.
+- **Capture:** the camera button saves a PNG of the player shown, a turntable GIF of them, or a team grid of every player with a first tile for the cup name (you type it in), the team's logo and name, and its colors (from the note's "Team Colours", else the save). Pictures take the view's angle and are framed to fit, at the size you pick, over a transparent, viewport, custom or team-color background.
 - **Save files:** load a PES 15–21 save under Save file in the settings, or drop it on the window (a file without an extension is tried as a save first); it's kept in the browser. An open export is matched to its team in the save, and its players then use their names, body shapes and skin colors from the save (edits are written back to the copy kept in the browser, and **Export** downloads it). The default body also shows and hides pieces the way the game does for FPC setups. A PES 15–17 save goes with Pre-Fox exports and a PES 18–21 save with Fox ones.
 - **Display options:**
   - Normal, specular and roughness maps, when a material names them
@@ -82,6 +84,7 @@ js/
     texture-lookup.js      which file a texture reference resolves to; kit choice
     edit-hair.js           PES 16's edit hair: the style and textures a player's save settings name
     face-layers.js         what PES 16 paints onto the editable face (eyebrows, beard, forehead, eyelids)
+    check.js               the export check: what's wrong with the open export, per player
   scene/
     stage.js               three.js renderer, scene, camera, lights, grid
     geometry.js            mesh geometry and PES weight scaling
@@ -91,6 +94,7 @@ js/
     navigation.js          the view, mouse / touch navigation (Blender and classic), smooth view moves
     framing.js             framing the model, stray meshes
     keyboard-camera.js     arrow keys and Blender-style view keys
+    capture.js             pictures for saving: fitted to the view's angle at any size, turntables, GIFs (gifenc)
   animation/
     quat.js                vector / quaternion helpers
     run-cycle.js           procedural run cycle on the PES skeleton
@@ -104,6 +108,10 @@ js/
     settings.js            settings panel (cog button): display options, default models, navigation
     body-shape.js          the Body shape sliders
     face-editor.js         the Face section and the face editor
+    panels.js              the panels over the details pane (settings, capture, export check), one open at a time
+    capture.js             the Capture panel: player PNG, turntable GIF, team grid
+    team-grid.js           the team grid and its first tile (cup, logo, team name and colors)
+    check.js               the Export check panel
   open/
     gather.js              what was dropped or picked, as files
     archives.js            .zip (JSZip) and .7z / .rar (7-Zip) reading
@@ -122,6 +130,7 @@ research/face-sliders/     a check page for the face sliders, and the scripts th
 
 - [three.js](https://threejs.org) 0.160 (MIT), loaded from jsDelivr.
 - [JSZip](https://stuk.github.io/jszip/) 3.10 (MIT), loaded from cdnjs the first time a .zip is opened.
+- [gifenc](https://github.com/mattdesl/gifenc) 1.0.3 (MIT), loaded from jsDelivr the first time a turntable GIF is made.
 - 7-Zip 24.09 via [7z-wasm](https://github.com/use-strict/7z-wasm) (LGPL; RAR decoding under the unRAR
   license restriction), in `vendor/7zip/`.
 - The model and texture parsing and the PES skeleton data are ported from

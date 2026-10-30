@@ -9,15 +9,7 @@ import { showError } from '../core/notices.js';
 import { openSave, restoreSave, exportSave, forgetSave } from '../core/save.js';
 import { DEFAULT_VERSIONS, defaultVersion, setDefaultVersion, isDefaultModel, isPreFox } from '../export/players.js';
 import { reloadForDefaults, refreshSaveLink } from './team.js';
-
-const panel = () => $('settings');
-const isOpen = () => !panel().hidden;
-
-function setOpen(open) {
-  panel().hidden = !open;
-  $('settingsButton').setAttribute('aria-expanded', String(open));
-  if (open) renderDefaultVersions();
-}
+import { addPanel } from './panels.js';
 
 /**
  * Which version of the default models to use: one choice for Fox (.fmdl) players and one for Pre-Fox
@@ -110,14 +102,7 @@ function initSave() {
 }
 
 export function initSettings() {
-  $('settingsButton').addEventListener('click', () => setOpen(!isOpen()));
-  $('settingsClose').addEventListener('click', () => { setOpen(false); $('settingsButton').focus(); });
-  addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && isOpen()) { setOpen(false); $('settingsButton').focus(); }
-  });
-  addEventListener('pointerdown', (e) => {
-    if (isOpen() && !panel().contains(e.target) && !$('settingsButton').contains(e.target)) setOpen(false);
-  });
+  addPanel({ panel: $('settings'), button: $('settingsButton'), close: $('settingsClose'), outsideCloses: true, onOpen: renderDefaultVersions });
   renderDefaultVersions();
   initSave();
 }

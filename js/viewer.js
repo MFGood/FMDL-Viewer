@@ -74,8 +74,11 @@ async function readPreFoxModel(path, problems) {
   return parsed;
 }
 
-/** Read and parse .fmdl and .model files. Files deleted from disk since they were opened are forgotten. */
-async function readModels(paths) {
+/**
+ * Read and parse .fmdl and .model files: { loaded: [{ path, parsed }], problems }. Files deleted from disk since
+ * they were opened are forgotten.
+ */
+export async function readModels(paths) {
   const loaded = [], problems = [], gone = [];
   for (const path of paths) {
     try { loaded.push({ path, parsed: /\.model$/i.test(path) ? await readPreFoxModel(path, problems) : parseFmdl(await readFile(path)) }); }

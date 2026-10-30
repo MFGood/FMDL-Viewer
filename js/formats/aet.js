@@ -112,16 +112,32 @@ export function gearSlot(id) {
 }
 
 /**
+ * The team colors a note lists under "Team Colours:", one per "- 1st: …" line, as "#rrggbb": the first two given
+ * as hex ("#ff2f92") or as red, green and blue ("123 222 162"). [] if there's no such list.
+ */
+export function noteColors(text) {
+  const block = /^\s*team colou?rs?\s*:?[^\n]*\n((?:[ \t]*-[^\n]*(?:\n|$))+)/im.exec(text);
+  const colors = [];
+  for (const line of block ? block[1].split('\n') : []) {
+    const value = line.slice(line.indexOf(':') + 1);
+    const hex = /#([0-9a-f]{6})\b/i.exec(value), rgb = /\b(\d{1,3})[\s,]+(\d{1,3})[\s,]+(\d{1,3})\b/.exec(value);
+    if (hex) colors.push(`#${hex[1].toLowerCase()}`);
+    else if (rgb && rgb.slice(1).every((n) => +n <= 255)) colors.push(`#${rgb.slice(1).map((n) => (+n).toString(16).padStart(2, '0')).join('')}`);
+  }
+  return colors.slice(0, 2);
+}
+
+/**
  * Read an export's structure. `readText(path)` returns a file's text (async); `isModel(path)` says which
  * files are models to show (.fmdl, and Pre-Fox .model files their .xml lists); `listedFor(dir)` gives the
  * models a folder's list has elsewhere (Common ones). The players' `fmdls` lists hold both kinds.
- * Returns { root, teamName, teamId, notePath, logoPath, kitConfigDir, kitDir, commonDir, players, collars }.
+ * Returns { root, teamName, teamId, teamColors, notePath, logoPath, kitConfigDir, kitDir, commonDir, players, collars }.
  */
 export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.test(p), listedFor = () => []) {
   const root = findRoot(index);
   if (root === null) return null;
   const folder = (name) => index.subdir(root, name);
-  const out = { root, teamName: null, teamId: null, notePath: null, logoPath: null, kitDir: folder('Kit Textures'), kitConfigDir: folder('Kit Configs'), commonDir: folder('Common'), players: [], collars: [] };
+  const out = { root, teamName: null, teamId: null, teamColors: [], notePath: null, logoPath: null, kitDir: folder('Kit Textures'), kitConfigDir: folder('Kit Configs'), commonDir: folder('Common'), players: [], collars: [] };
 
   // Team note: a .txt at the top level, preferring one with "note" in its name. First "Team:" line, and the
   // "ID:" line under it if there is one.
@@ -131,6 +147,7 @@ export async function scanExport(index, readText, isModel = (p) => /\.fmdl$/i.te
     const m = /^\s*team\s*:\s*(.*?)\s*$/im.exec(text);
     if (m && m[1]) {
       Object.assign(out, { teamName: m[1], notePath: p, teamId: /^\s*id\s*:\s*(\d+)\s*$/im.exec(text)?.[1] ?? null });
+      out.teamColors = noteColors(text);
       break;
     }
     if (!out.notePath) out.notePath = p;

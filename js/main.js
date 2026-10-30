@@ -21,12 +21,16 @@ import {
 import { renderTeam, playablePlayers, stepPlayer, reloadForDefaults } from './ui/team.js';
 import { renderPlayerPanel } from './ui/details.js';
 import { initSettings, loadSave } from './ui/settings.js';
+import { initCapture } from './ui/capture.js';
+import { initCheck } from './ui/check.js';
 import { openBatch, reload, canReload, openSample, restoreFolder } from './open/opening.js';
 import { pickedBatch, droppedBatch, batchFiles, folderBatch, canReadFolder } from './open/gather.js';
 
 initNotices();
 restoreFolder(); // before the save, so its teams aren't listed only once the save is read
 initSettings();
+initCapture();
+initCheck();
 makeGrid();
 
 // ---------------------------------------------------------------- display options

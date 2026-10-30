@@ -12,7 +12,8 @@
   { "imports": {
     "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
     "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
-    "idb": "https://cdn.jsdelivr.net/npm/idb@8.0.3/build/index.js"
+    "idb": "https://cdn.jsdelivr.net/npm/idb@8.0.3/build/index.js",
+    "gifenc": "https://cdn.jsdelivr.net/npm/gifenc@1.0.3/dist/gifenc.esm.js"
   } }
   </script>
   <script type="module" src="js/main.js"></script>
@@ -26,6 +27,10 @@
   <label class="btn" for="folderInput">Open export folder…<input id="folderInput" type="file" webkitdirectory multiple></label>
   <button id="reload" type="button" disabled title="Re-read the files you opened (R)">Reload</button>
   <button id="resetView" type="button">Frame model</button>
+  <button id="checkButton" type="button" hidden aria-expanded="false" aria-controls="check" title="Look the export over for problems">Check export</button>
+  <button id="captureButton" type="button" class="icon" aria-label="Capture" title="Save a picture, a turntable GIF or a team grid" aria-expanded="false" aria-controls="capture">
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M9 3 7.2 5H4a2 2 0 0 0-2 2v11a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-3.2L15 3H9zm3 4.5a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6z"/></svg>
+  </button>
   <button id="settingsButton" type="button" class="icon" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="settings">
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.6 7.6 0 0 0 0-2l2.1-1.6a.5.5 0 0 0 .1-.6l-2-3.5a.5.5 0 0 0-.6-.2l-2.5 1a7.3 7.3 0 0 0-1.7-1l-.4-2.6a.5.5 0 0 0-.5-.4h-4a.5.5 0 0 0-.5.4l-.4 2.6a7.3 7.3 0 0 0-1.7 1l-2.5-1a.5.5 0 0 0-.6.2l-2 3.5a.5.5 0 0 0 .1.6L4.6 11a7.6 7.6 0 0 0 0 2l-2.1 1.6a.5.5 0 0 0-.1.6l2 3.5c.1.2.4.3.6.2l2.5-1c.5.4 1.1.7 1.7 1l.4 2.6c0 .2.2.4.5.4h4c.3 0 .5-.2.5-.4l.4-2.6c.6-.3 1.2-.6 1.7-1l2.5 1c.2.1.5 0 .6-.2l2-3.5a.5.5 0 0 0-.1-.6L19.4 13zM12 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z"/></svg>
   </button>
@@ -115,7 +120,68 @@
       <p class="hint">Green dot: texture found. Amber: missing. Gray: not drawn by the viewer.</p>
     </section>
   </aside>
-  <div id="settings" role="dialog" aria-label="Settings" hidden>
+  <div id="capture" class="overlay-panel" role="dialog" aria-label="Capture" hidden>
+    <div class="settings-head">
+      <h2>Capture</h2>
+      <button type="button" id="captureClose" aria-label="Close capture">×</button>
+    </div>
+    <section>
+      <div class="kits" id="captureModes"></div>
+      <p class="hint" id="captureModeNote"></p>
+    </section>
+    <section>
+      <h2 id="captureSizeLabel">Size</h2>
+      <div class="capture-size">
+        <input type="number" id="captureWidth" min="64" max="4096" step="1" aria-label="Width in pixels">
+        <span>×</span>
+        <input type="number" id="captureHeight" min="64" max="4096" step="1" aria-label="Height in pixels">
+        <span class="hint">px</span>
+      </div>
+      <div class="capture-size" id="captureMotion">
+        <input type="number" id="captureSeconds" min="1" max="20" step="0.5" aria-label="Length in seconds">
+        <span class="hint">s at</span>
+        <input type="number" id="captureFps" min="5" max="50" step="1" aria-label="Frames per second">
+        <span class="hint">frames / s</span>
+      </div>
+    </section>
+    <section>
+      <h2>Background</h2>
+      <div class="kits" id="captureBackgrounds"></div>
+      <div class="chk-row" id="captureCustomRow">
+        <input type="color" id="captureColor" value="#202624" aria-label="Background color">
+        <span class="hint">Custom color</span>
+      </div>
+    </section>
+    <section id="captureGrid">
+      <h2>Team grid</h2>
+      <label class="field">Cup name <input type="text" id="captureCup" placeholder="e.g. Autumn Cup 2026" autocomplete="off" spellcheck="false"></label>
+      <p class="hint warn" id="captureCupNote" hidden>Enter the cup name for the first tile.</p>
+      <div class="chk-row">
+        <input type="color" id="captureColor1" aria-label="First team color">
+        <input type="color" id="captureColor2" aria-label="Second team color">
+        <span class="hint" id="captureColorsNote">Team colors</span>
+      </div>
+      <label class="field">Columns <input type="number" id="captureColumns" min="1" max="12" step="1" placeholder="Auto"></label>
+    </section>
+    <section>
+      <button type="button" class="primary" id="captureSave">Save</button>
+      <p class="hint" id="captureNote"></p>
+    </section>
+  </div>
+  <div id="check" class="overlay-panel" role="dialog" aria-label="Export check" hidden>
+    <div class="settings-head">
+      <h2>Export check</h2>
+      <button type="button" id="checkClose" aria-label="Close export check">×</button>
+    </div>
+    <div class="check-summary" id="checkSummary"></div>
+    <div class="save-file">
+      <button type="button" id="checkRun">Check again</button>
+      <button type="button" id="checkCopy">Copy report</button>
+    </div>
+    <div id="checkList"></div>
+    <p class="hint">Only the export is open, so a texture the game has in its own files shows as missing here too. Click a player to view them.</p>
+  </div>
+  <div id="settings" class="overlay-panel" role="dialog" aria-label="Settings" hidden>
     <div class="settings-head">
       <h2>Settings</h2>
       <button type="button" id="settingsClose" aria-label="Close settings">×</button>

@@ -78,6 +78,32 @@ export function resize() {
   for (const m of lineMaterials) m.resolution.set(w, h);
 }
 
+/**
+ * Draw the scene once with `cam` at width × height pixels, without the grid, bounding boxes or bones and with
+ * the key light on `cam`, and return the picture on a 2D canvas (transparent where nothing was drawn). The
+ * viewport is put back as it was.
+ */
+export function renderFrame(cam, width, height) {
+  const ratio = renderer.getPixelRatio(), gridShown = grid?.visible, boxesShown = boxLayer.visible;
+  if (grid) grid.visible = false;
+  boxLayer.visible = false;
+  renderer.setPixelRatio(1);
+  renderer.setSize(width, height, false);
+  scene.add(cam);
+  cam.add(keyLight);
+  renderer.render(scene, cam);
+  const out = document.createElement('canvas');
+  out.width = width; out.height = height;
+  out.getContext('2d').drawImage(renderer.domElement, 0, 0); // before the buffer is shown and cleared
+  camera.add(keyLight);
+  scene.remove(cam);
+  if (grid) grid.visible = gridShown;
+  boxLayer.visible = boxesShown;
+  renderer.setPixelRatio(ratio);
+  resize();
+  return out;
+}
+
 export function render() {
   renderer.render(scene, camera);
   if (boneLayer.visible && boneLayer.children.length) {
