@@ -117,7 +117,7 @@
   "skh_pinky_mcp_r": {"parent": "skh_pinky_mata_r", "pos": [-0.653639, 1.010565, 0.033394]},
   "skh_pinky_pip_r": {"parent": "skh_pinky_mcp_r", "pos": [-0.67222, 0.983181, 0.021202]},
   "skh_pinky_dip_r": {"parent": "skh_pinky_pip_r", "pos": [-0.682607, 0.967851, 0.014341]},
-  "dsk_hair": {"parent": "sk_head", "pos": [0.0, 1.640058, 0.054331]},
+  "dsk_hair": {"parent": "sk_head", "pos": [0.0, 1.516, -0.071]},
   "skf_jaw": {"parent": "sk_head", "pos": [-1e-06, 1.636909, 0.079548]},
   "dsk_earlobe_l": {"parent": "dsk_ear_b_l", "pos": [0.068049, 1.664998, 0.079109]},
   "dsk_earlobe_r": {"parent": "dsk_ear_b_r", "pos": [-0.068047, 1.665, 0.079108]},

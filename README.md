@@ -128,6 +128,7 @@ assets/
   defaults/                default body, hands, editable face, edit hair and skin textures (loaded when needed)
   sample/                  the example model shown at start-up
 research/face-sliders/     a check page for the face sliders, and the scripts that read them out of PES 2016
+research/helper-bones/     the script that reads the helper-bone drivers out of PES 2016
 ```
 
 ## Libraries and credits

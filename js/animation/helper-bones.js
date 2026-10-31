@@ -4,8 +4,8 @@
 // from a table in its code: each helper follows a source bone, and many also turn, slide or swell with the
 // angle of a nearby joint (the shorts' panels with the thigh and knee, the sleeve and shoulder bones with
 // the upper arm, the collar with the neck). The table, formulas and constants below were read out of PES
-// 2016's executable and checked against that code running in an emulator. PES 2017–2021 keep the same
-// bones and bind pose, so they carry over; bones only the later games have (the sleeve rings, the hem
+// 2016's executable and checked against that code running in an emulator (research/helper-bones). PES
+// 2017–2021 keep the same bones and bind pose, so they carry over; bones only the later games have (the sleeve rings, the hem
 // "fake" extensions…) aren't in the readable code, so they just follow their parents, except the shirt's
 // belly panels, which are approximated from the shorts' panels (see H.bellyRoot).
 //
@@ -107,7 +107,9 @@ const H = {
     const l = side === 'l';
     const ry = l ? -Math.max(ny, 0) : Math.min(ny, 0);
     const x = l ? Math.max(0.06 * sh, 0) : Math.max(-0.06 * sh, 0);
-    const z = l ? clamp(-0.06 * sh - 0.06 * ny, -2.5, 0) : clamp(-0.06 * sh - 0.06 * ny, 0, 2.5);
+    let z = l ? clamp(-0.06 * sh - 0.06 * ny, -2.5, 0) : clamp(-0.06 * sh - 0.06 * ny, 0, 2.5);
+    // A thicker neck (its scale across, from the body shape) pushes the collar out.
+    if (d.neckScale > 1) z += (l ? -5 : 5) * (d.neckScale - 1);
     const y = Math.max(0.125 * deg(nz), -0.3);
     return { R: qMul(d.R0, qMul(qZ(-Math.max(nz, 0)), qY(ry))), dT: [x * 0.01, y * 0.01, z * 0.01] };
   },
@@ -156,6 +158,33 @@ const H = {
     const s = clamp(1 + 0.001 * Math.abs(deg(a.a[0])), 1, 1.2);
     return { S: [1, s, s], R: d.R0 };
   },
+  // The back of the neck tips and rises as the head nods.
+  neckback(side, a, b, c, d) {
+    const z = deg(a.a[2]);
+    return { R: qMul(d.R0, qZ(rad(clamp(0.55 * z, -15, 35)))), dT: [0, Math.max(0.07 * z, -1.2) * 0.01, 0] };
+  },
+  // Legs: the knee slides out as the knee bends, and turns once it's bent past a right angle.
+  knee(side, a, b, c, d) {
+    const z = deg(a.a[2]);
+    return { R: qMul(d.R0, qZ(rad(0.8 * Math.max(-z - 90, 0)))), dT: [0, clamp(0.653 - 0.01 * z, 0.653, 1.5) * 0.01, 0] };
+  },
+  foot(side, a, b, c, d) {
+    const x = deg(a.a[0]), z = deg(a.a[2]);
+    const dz = side === 'l' ? clamp(-0.05 * x, -2, 0.5) : clamp(-0.05 * x, -0.5, 2);
+    return { R: d.R0, dT: [Math.min(0.1 * z, 3) * 0.01, 0, dz * 0.01] };
+  },
+  // The toes bend up when the tip of the foot (placed before they bend) would go below the ground.
+  toe(side, a, b, c, d) {
+    const h = a.p[1];
+    return { R: h < 0 ? qMul(d.R0, qZ(Math.min(Math.asin(clamp(-h / 0.1, -1, 1)), rad(35)))) : d.R0 };
+  },
+  // The hair hangs from the chest and swings with the head and neck together.
+  hair(side, a, b, c, d) {
+    const [x, y, z] = a.a.map((v, i) => deg(v + b.a[i]));
+    return { R: qMul(d.R0, qZ(rad(-0.2 * x + 0.2 * y - 0.3 * z))), dT: [-0.05 * y * 0.01, -0.12 * x * 0.01, -0.06 * x * 0.01] };
+  },
+  // The ears just follow the head, but keep their shape when the head is scaled unevenly (see UNSHEARED).
+  rigid: (side, a, b, c, d) => ({ R: d.R0 }),
 };
 /** Copies a share of the joint's rotation, and optionally slides along one axis with one of its angles. */
 const copy = (w, slide) => (side, a, b, c, d) => {
@@ -178,17 +207,25 @@ const DRIVERS = [
   ['dsk_elbow_{s}', 'sk_forearm_{s}', 'sk_forearm_{s}', H.elbow],
   ['dsk_forearm_t_{s}', 'sk_forearm_{s}', 'sk_hand_{s}', H.forearmTwist],
   ['dsk_forearm_{s}', 'sk_forearm_{s}', 'sk_hand_{s}', copy([0.4, 0, 0])],
+  ['dsk_neckback', 'sk_head', 'sk_head', H.neckback],
   ['dsk_scm', 'sk_neck', 'sk_neck', copy([0.5, 0.5, 0.5])],
   ['dsk_collar_{s}', 'sk_chest', 'sk_chest', H.collar, 'sk_neck', 'sk_shoulder_{s}'],
   ['dsk_clavicle_{s}', 'sk_chest', 'sk_shoulder_{s}', H.clavicle],
   ['dsk_pectoralis_{s}', 'sk_chest', 'sk_upperarm_{s}', H.pectoralis, 'sk_shoulder_{s}'],
   ['dsk_belly_scale', 'sk_belly', 'sk_belly', H.belly, 'dsk_hip'],
   ['dsk_scapula_{s}', 'sk_chest', 'sk_upperarm_{s}', H.scapula, 'sk_shoulder_{s}'],
+  ['dsk_knee_{s}', 'sk_leg_{s}', 'sk_leg_{s}', H.knee],
   ['dsk_hem_{s}', 'sk_thigh_{s}', 'sk_thigh_{s}', H.hemRoot],
   ['dsk_hem_i_{s}', 'dsk_hem_{s}', 'sk_thigh_{s}', H.hemInner],
   ['dsk_hem_f_{s}', 'dsk_hem_{s}', 'dsk_hem_{s}', H.hemFront, 'sk_leg_{s}'],
   ['dsk_hem_o_{s}', 'dsk_hem_{s}', 'dsk_hem_{s}', H.hemOuter],
   ['dsk_hem_ba_{s}', 'dsk_hem_{s}', 'sk_leg_{s}', H.hemBack],
+  ['dsk_foot_{s}', 'sk_foot_{s}', 'sk_foot_{s}', H.foot],
+  ['dsk_toe_{s}', 'sk_foot_{s}', 'tip_dsk_toe_{s}', H.toe],
+  ['dsk_ear_t_{s}', 'sk_head', 'sk_head', H.rigid],
+  ['dsk_ear_b_{s}', 'sk_head', 'sk_head', H.rigid],
+  ['dsk_earlobe_{s}', 'dsk_ear_b_{s}', 'sk_head', H.rigid],
+  ['dsk_hair', 'sk_chest', 'sk_head', H.hair, 'sk_neck'],
   // Approximations, see H.bellyRoot.
   ['dsk_pos_belly_{s}', 'dsk_hip', 'sk_thigh_{s}', H.bellyRoot],
   ['dsk_belly_f_{s}', 'dsk_pos_belly_{s}', 'dsk_pos_belly_{s}', H.hemFront, 'sk_thigh_{s}'],
@@ -200,18 +237,22 @@ const DRIVERS = [
 /** The bone each driven helper follows: Map helper -> source. */
 export const HELPER_SOURCES = new Map(DRIVERS.map(({ target, names: [source] }) => [target, source]));
 
+/** Helpers the game keeps from shearing when their source is scaled unevenly: they take its scale, not its skew. */
+export const UNSHEARED = new Set(DRIVERS.filter(({ handler }) => handler === H.rigid).map(({ target }) => target));
+
 const _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3();
 const toQ = (q) => _q.set(q[0], q[1], q[2], q[3]);
 const trs = (p, q, s = [1, 1, 1]) => new THREE.Matrix4().compose(_v.set(p[0], p[1], p[2]), toQ(q), _s.set(s[0], s[1], s[2]));
 
 /**
  * The game's world matrices for the helper bones it drives, for the posed rig (its world matrices up to
- * date). `bind`: bone -> bind rotation, `rest`: bone -> rest world position, `shoulderHeight`: the body shape's
- * shoulder height (−1…+1), which the game passes to the collarbone and collar drivers. Returns Map name -> THREE.Matrix4.
+ * date). `bind`: bone -> bind rotation, `rest`: bone -> rest world position. From the body shape:
+ * `shoulderHeight` (−1…+1), which the game passes to the collarbone and collar drivers, and `neckScale`, the
+ * neck's scale across (z), which it passes to the collar drivers. Returns Map name -> THREE.Matrix4.
  * At the bind pose these aren't quite the bind transforms (the formulas' neutral points sit a little off it,
  * and the collarbone takes the chest's orientation), so callers measure poses against the result at rest.
  */
-export function helperBoneMatrices(bones, bind, rest, shoulderHeight = 0) {
+export function helperBoneMatrices(bones, bind, rest, { shoulderHeight = 0, neckScale = 1 } = {}) {
   const pose = new Map(); // game world: { q, p, m }
   const viewer = (name) => {
     if (name === 'sk_root_hip') name = 'dsk_hip';
@@ -232,11 +273,16 @@ export function helperBoneMatrices(bones, bind, rest, shoulderHeight = 0) {
   const joint = (name) => {
     if (!name) return null;
     if (written.has(name)) return written.get(name);
-    const parent = ANIM_PARENT[name], g = world(name), gp = parent && world(parent);
+    const parent = ANIM_PARENT[name];
+    if (!parent) { // a point the driver reads the position of (the toe tip)
+      const v = viewer(name);
+      return v && { q: ID, a: [0, 0, 0], p: v.p };
+    }
+    const g = world(name), gp = world(parent);
     if (!g || !gp) return null;
     const q0 = name.startsWith('sk_upperarm') ? ID : qMul(qInv(bind[parent]), bind[name]);
     const q = qMul(qMul(qInv(q0), qInv(gp.q)), g.q);
-    return { q, a: euler(q) };
+    return { q, a: euler(q), p: g.p };
   };
   const out = new Map();
   for (const { side, target, handler, names: [source, read, extra1, extra2] } of DRIVERS) {
@@ -250,6 +296,7 @@ export function helperBoneMatrices(bones, bind, rest, shoulderHeight = 0) {
     const d = {
       R0, T0, P: P?.q ?? ID, q60: parent ? qMul(qInv(bind[parent]), bind[source]) : ID, src: src.q,
       qa: readParent && bind[readParent] && bind[read] ? qMul(qInv(bind[readParent]), bind[read]) : ID, // the joint read's bind rotation under its parent
+      neckScale,
     };
     const res = handler(side, a, joint(extra1) ?? { a: [0, 0, 0], q: ID }, joint(extra2) ?? { a: [0, 0, 0], q: ID }, d);
     const T = res.T ?? (res.dT ? T0.map((v, i) => v + res.dT[i]) : T0);

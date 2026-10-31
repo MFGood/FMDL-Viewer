@@ -10,13 +10,14 @@
 // its children (so a wider shoulder moves the arm out, a longer belly lifts the chest): what the tables
 // assume, as every bone carries the same leg-length factor. Shoulder height also goes to the collarbone and
 // collar drivers (helper-bones.js), which raise or lower the shoulder: no mesh is weighted to sk_shoulder,
-// so that's most of what it does. Not done here: the game also hands the neck's scale to a neck driver.
+// so that's most of what it does. The neck's scale goes to the collar drivers too, which move out for a
+// thicker neck.
 
 import * as THREE from 'three';
 import { state } from '../core/state.js';
 import { viewedPlayer, settingsOf } from '../export/players.js';
 import { savePlayerOf } from '../export/save-team.js';
-import { HELPER_SOURCES } from './helper-bones.js';
+import { HELPER_SOURCES, UNSHEARED } from './helper-bones.js';
 
 /** The settings, in the game's order: key, label, and the field the save reader gives it. */
 export const SHAPE_SETTINGS = [
@@ -134,6 +135,9 @@ export function boneScales(shape) {
 /** Shoulder height for the game's collarbone and collar drivers: −1…+1 (see helperBoneMatrices). */
 export const shoulderHeightOf = (shape) => amount(shape, 'shoulderHeight');
 
+/** The neck's scale across (z) for the game's collar drivers (see helperBoneMatrices). */
+export const neckScaleOf = (shape) => boneScales(shape).get('sk_neck')?.[2] ?? 1;
+
 /** The size of the whole body: the game makes it larger as the legs get longer (at 180 cm). */
 export function overallScale(shape) {
   const v = amount(shape, 'legLength');
@@ -149,13 +153,23 @@ function scaleMatrix(scale, frame) {
 }
 
 const _p = new THREE.Vector3(), _o = new THREE.Vector3(), _m = new THREE.Matrix4();
+const _q = new THREE.Quaternion(), _s = new THREE.Vector3();
+
+/** Matrix m with the orientation of `oriented` and its own scale along each of its axes, so no skew. */
+function unshear(m, oriented) {
+  const e = m.elements;
+  _s.set(Math.hypot(e[0], e[1], e[2]), Math.hypot(e[4], e[5], e[6]), Math.hypot(e[8], e[9], e[10]));
+  oriented.decompose(_o, _q, _p);
+  m.compose(_o.setFromMatrixPosition(m), _q, _s);
+}
 
 /**
  * Reshape a posed rig whose world matrices are up to date. `order` lists its bones parents first; `bind`
  * has their bind frames. A main bone (sk_*, dsk_hip) moves by its parent's scale but doesn't take it on;
  * a helper bone (dsk_*) follows the bone that drives it (its parent if none does) whole, scale included,
  * the way the game composes a driven helper with its source; the calf table, which shrinks the knee helper
- * as much as it thickens the shin, is made for that. Each bone's local matrix is set to match, with
+ * as much as it thickens the shin, is made for that. The ears (UNSHEARED) take the scale along their own
+ * axes but keep their own orientation, as the game does. Each bone's local matrix is set to match, with
  * matrixAutoUpdate off, so the next updateMatrixWorld keeps the shape.
  */
 export function applyBodyShape(order, bind, shape) {
@@ -179,6 +193,7 @@ export function applyBodyShape(order, bind, shape) {
     else if (helper) {
       // Where it sits on its source, carried by the source as reshaped.
       world = sourceShaped.clone().multiply(_m.copy(before.get(source)).invert().multiply(w));
+      if (UNSHEARED.has(bone.name)) unshear(world, w);
     } else {
       // Its offset from the parent, in the parent's axes, scaled by the parent's own scale.
       const wp = before.get(source);
