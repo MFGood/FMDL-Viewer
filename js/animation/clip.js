@@ -106,16 +106,21 @@ const mirrorPose = (pose) => Object.fromEntries(Object.entries(pose).map(([bone,
 
 // The pose for clips the game gives no hand poses (its runs, and the .anim clips): a guess, as where the game
 // picks one for those isn't known. move_nigiri is the loose running grip most free kicks and penalties use.
-const DEFAULT_HAND_POSE = 'move_nigiri';
+export const DEFAULT_HAND_POSE = 'move_nigiri';
+
+/** Hands choices besides a pose's name: the clip's own (the game's timing, or else DEFAULT_HAND_POSE) and open. */
+export const CLIP_HANDS = '', OPEN_HANDS = 'open';
 
 /**
  * The clip with hand poses from hands.json ({ poses: { name: left-hand pose }, clips: { path: { l, r } } }), where
  * each hand's records are [start frame, end frame, pose name]: the hand takes each pose from its start, blending
- * from the one before while their frames overlap, and holds the last. Clips without any get DEFAULT_HAND_POSE.
+ * from the one before while their frames overlap, and holds the last. `choice` is CLIP_HANDS (the game's
+ * records for the clip, or DEFAULT_HAND_POSE without any), OPEN_HANDS (none) or a pose held throughout.
  */
-export function withHands(clip, hands, path) {
-  if (!hands) return clip;
-  const records = hands.clips[path] || { l: [[0, 0, DEFAULT_HAND_POSE]], r: [[0, 0, DEFAULT_HAND_POSE]] };
+export function withHands(clip, hands, path, choice = CLIP_HANDS) {
+  if (!hands || choice === OPEN_HANDS) return { ...clip, hands: null };
+  const hold = (name) => ({ l: [[0, 0, name]], r: [[0, 0, name]] });
+  const records = choice !== CLIP_HANDS ? hold(choice) : hands.clips[path] || hold(DEFAULT_HAND_POSE);
   const side = (s) => records[s].map(([start, end, name]) => [start, end, s === 'l' ? hands.poses[name] : mirrorPose(hands.poses[name])]).filter((r) => r[2]);
   return { ...clip, hands: { l: side('l'), r: side('r') } };
 }

@@ -9,7 +9,7 @@ import { options } from '../core/options.js';
 import { state } from '../core/state.js';
 import { scene } from '../scene/stage.js';
 import { runPose } from './run-cycle.js';
-import { parseAnim, ganiClip, withHands, clipPose, clipDuration } from './clip.js';
+import { parseAnim, ganiClip, withHands, clipPose, clipDuration, CLIP_HANDS } from './clip.js';
 import { helperBoneMatrices } from './helper-bones.js';
 import { currentShape, applyBodyShape, shoulderHeightOf } from './body-shape.js';
 
@@ -28,9 +28,9 @@ function loadSkeleton() {
 }
 
 // The animation played: the run cycle (RUN_CYCLE) or a clip's path under CLIP_FOLDER (.anim or .gani), and
-// that clip once loaded. Clips start from their first frame when picked.
+// that clip once loaded (as read, and with its hands). Clips start from their first frame when picked.
 export const RUN_CYCLE = 'run', CLIP_FOLDER = 'assets/animations';
-let animation = RUN_CYCLE, clip = null, clipStart = null;
+let animation = RUN_CYCLE, bareClip = null, clip = null, clipStart = null, hands = null, handChoice = CLIP_HANDS;
 export const currentAnimation = () => animation;
 
 /** The playing clip's length: { seconds, frames, fps }, or null for the run cycle. */
@@ -45,12 +45,23 @@ let handsLoading = null;
 const loadHands = () => (handsLoading ||= fetchAsset(`${CLIP_FOLDER}/hands.json`)
   .then((buffer) => JSON.parse(new TextDecoder().decode(buffer)), () => null));
 
-/** Play the run cycle (RUN_CYCLE) or the clip at `path` under CLIP_FOLDER. Throws if the clip won't load. */
+/** Play the run cycle (RUN_CYCLE) or the clip at `path` under CLIP_FOLDER, with its own hands. Throws if the clip won't load. */
 export async function setAnimation(path) {
-  if (path === RUN_CYCLE) { animation = RUN_CYCLE; clip = null; return; }
+  if (path === RUN_CYCLE) { animation = RUN_CYCLE; bareClip = clip = null; return; }
   const buffer = await fetchAsset(`${CLIP_FOLDER}/${path}`);
-  const parsed = withHands(/\.gani$/i.test(path) ? ganiClip(buffer) : parseAnim(new TextDecoder().decode(buffer)), await loadHands(), path);
-  animation = path; clip = parsed; clipStart = null;
+  const parsed = /\.gani$/i.test(path) ? ganiClip(buffer) : parseAnim(new TextDecoder().decode(buffer));
+  hands = await loadHands();
+  animation = path; bareClip = parsed; clipStart = null;
+  setHandChoice(CLIP_HANDS);
+}
+
+/** For the hands picker, while a clip plays: { gameTiming: whether the game times hand poses to it, poses: names, choice }. */
+export const handOptions = () => bareClip && hands && { gameTiming: !!hands.clips[animation], poses: Object.keys(hands.poses), choice: handChoice };
+
+/** Give the playing clip other hands (see withHands), carrying on from where it is. */
+export function setHandChoice(choice) {
+  handChoice = choice;
+  if (bareClip) clip = withHands(bareClip, hands, animation, choice);
 }
 
 /** { root, bones: Map name -> Bone, staticBone, index: Map Bone -> i, skeleton, rest: Map Bone -> position } */

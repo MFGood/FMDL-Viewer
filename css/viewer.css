@@ -386,6 +386,22 @@ label.chk {
   min-width: 0;
 }
 
+/* a list with previous / next buttons either side */
+.stepper {
+  display: flex;
+  gap: 4px;
+  min-width: 0;
+}
+
+.stepper[hidden] {
+  display: none;
+}
+
+.stepper button {
+  padding: 0 8px;
+  line-height: 1;
+}
+
 input[type=color] {
   width: 32px;
   height: 20px;

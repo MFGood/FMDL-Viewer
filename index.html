@@ -108,9 +108,11 @@
         </div>
         <div class="anim-picker">
           <label for="animCategory">Category</label>
-          <select id="animCategory"><option value="run">Run cycle</option></select>
+          <div class="stepper"><button type="button" data-step="-1" aria-label="Previous category" title="Previous category">‹</button><select id="animCategory"><option value="run">Run cycle</option></select><button type="button" data-step="1" aria-label="Next category" title="Next category">›</button></div>
           <label for="animSelect">Clip</label>
-          <select id="animSelect"></select>
+          <div class="stepper"><button type="button" data-step="-1" aria-label="Previous clip" title="Previous clip">‹</button><select id="animSelect"></select><button type="button" data-step="1" aria-label="Next clip" title="Next clip">›</button></div>
+          <label for="animHands">Hands</label>
+          <div class="stepper"><button type="button" data-step="-1" aria-label="Previous hand pose" title="Previous hand pose">‹</button><select id="animHands"></select><button type="button" data-step="1" aria-label="Next hand pose" title="Next hand pose">›</button></div>
         </div>
         <p class="hint" id="animNote"></p>
         <p class="hint">Plays on the full PES skeleton, to see how the model's weights deform. The run cycle is procedural; clips play in place.</p>
