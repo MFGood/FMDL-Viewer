@@ -115,6 +115,23 @@
           <div class="stepper"><button type="button" data-step="-1" aria-label="Previous hand pose" title="Previous hand pose">‹</button><select id="animHands"></select><button type="button" data-step="1" aria-label="Next hand pose" title="Next hand pose">›</button></div>
         </div>
         <p class="hint" id="animNote"></p>
+        <div class="anim-flags" id="animFlags" hidden>
+          <p class="hint">Parts the game changes by the player's hunching and arm movement settings:</p>
+          <div class="chk-row">
+            <label class="chk"><input type="checkbox" disabled data-part="spine"> Back</label>
+            <label class="chk"><input type="checkbox" disabled data-part="leftarm"> Left arm</label>
+            <label class="chk"><input type="checkbox" disabled data-part="rightarm"> Right arm</label>
+          </div>
+          <div class="anim-picker">
+            <label for="animHunching">Hunching</label>
+            <div class="stepper"><button type="button" data-step="-1" aria-label="Previous hunching level" title="Previous hunching level">‹</button><select id="animHunching"></select><button type="button" data-step="1" aria-label="Next hunching level" title="Next hunching level">›</button></div>
+            <label for="animArm">Arm movement</label>
+            <div class="stepper"><button type="button" data-step="-1" aria-label="Previous arm movement level" title="Previous arm movement level">‹</button><select id="animArm"></select><button type="button" data-step="1" aria-label="Next arm movement level" title="Next arm movement level">›</button></div>
+            <label for="animFoot">Strong foot</label>
+            <div class="stepper"><select id="animFoot"><option value="r">Right</option><option value="l">Left</option></select></div>
+          </div>
+          <p class="hint">The game's levels. Which edit screen setting gives which level isn't known.</p>
+        </div>
         <p class="hint">Plays on the full PES skeleton, to see how the model's weights deform. The run cycle is procedural; clips play in place.</p>
       </section>
     </div>

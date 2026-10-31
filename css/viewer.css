@@ -402,6 +402,21 @@ label.chk {
   line-height: 1;
 }
 
+/* the playing clip's personalized parts, read only */
+.anim-flags {
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+
+.anim-flags .chk-row {
+  flex-wrap: wrap;
+  gap: 4px 14px;
+}
+
+.anim-flags label.chk {
+  cursor: default;
+}
+
 input[type=color] {
   width: 32px;
   height: 20px;

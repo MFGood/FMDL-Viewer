@@ -9,7 +9,8 @@ import { options } from '../core/options.js';
 import { state } from '../core/state.js';
 import { scene } from '../scene/stage.js';
 import { runPose } from './run-cycle.js';
-import { parseAnim, ganiClip, withHands, clipPose, clipDuration, CLIP_HANDS } from './clip.js';
+import { parseAnim, ganiClip, withHands, withTurns, clipPose, clipDuration, CLIP_HANDS } from './clip.js';
+import { personalTurns } from './personalize.js';
 import { helperBoneMatrices } from './helper-bones.js';
 import { currentShape, applyBodyShape, shoulderHeightOf, neckScaleOf } from './body-shape.js';
 
@@ -33,8 +34,8 @@ export const RUN_CYCLE = 'run', CLIP_FOLDER = 'assets/animations';
 let animation = RUN_CYCLE, bareClip = null, clip = null, clipStart = null, hands = null, handChoice = CLIP_HANDS;
 export const currentAnimation = () => animation;
 
-/** The playing clip's length: { seconds, frames, fps }, or null for the run cycle. */
-export const currentClipInfo = () => clip && { seconds: clipDuration(clip), frames: clip.frames, fps: clip.fps };
+/** The playing clip's length and running speed: { seconds, frames, fps, kmh }, or null for the run cycle. */
+export const currentClipInfo = () => clip && { seconds: clipDuration(clip), frames: clip.frames, fps: clip.fps, kmh: clip.kmh };
 
 /** The clips that come with the viewer, by category: { category: [path under CLIP_FOLDER, …] } (its clips.json). */
 export const listClips = () => fetchAsset(`${CLIP_FOLDER}/clips.json`).then((buffer) => JSON.parse(new TextDecoder().decode(buffer)));
@@ -45,12 +46,21 @@ let handsLoading = null;
 const loadHands = () => (handsLoading ||= fetchAsset(`${CLIP_FOLDER}/hands.json`)
   .then((buffer) => JSON.parse(new TextDecoder().decode(buffer)), () => null));
 
+// Which parts of each clip the game lets the player's hunching and arm movement settings change, from its
+// PersonalizedData.bin (also built by research/hand-animations): { path: { spine, leftarm, rightarm } }; {} if it won't load.
+let personalized = {}, personalizedLoading = null;
+const loadPersonalized = () => (personalizedLoading ||= fetchAsset(`${CLIP_FOLDER}/personalized.json`)
+  .then((buffer) => JSON.parse(new TextDecoder().decode(buffer)), () => ({})));
+
+/** The playing clip's personalized parts ({ spine, leftarm, rightarm }, each 0 or 1), or null if the game lists none. */
+export const currentPersonalized = () => (clip && personalized[animation]) || null;
+
 /** Play the run cycle (RUN_CYCLE) or the clip at `path` under CLIP_FOLDER, with its own hands. Throws if the clip won't load. */
 export async function setAnimation(path) {
   if (path === RUN_CYCLE) { animation = RUN_CYCLE; bareClip = clip = null; return; }
   const buffer = await fetchAsset(`${CLIP_FOLDER}/${path}`);
   const parsed = /\.gani$/i.test(path) ? ganiClip(buffer) : parseAnim(new TextDecoder().decode(buffer));
-  hands = await loadHands();
+  [hands, personalized] = await Promise.all([loadHands(), loadPersonalized(), loadSkeleton()]);
   animation = path; bareClip = parsed; clipStart = null;
   setHandChoice(CLIP_HANDS);
 }
@@ -58,11 +68,28 @@ export async function setAnimation(path) {
 /** For the hands picker, while a clip plays: { gameTiming: whether the game times hand poses to it, poses: names, choice }. */
 export const handOptions = () => bareClip && hands && { gameTiming: !!hands.clips[animation], poses: Object.keys(hands.poses), choice: handChoice };
 
+// The player's motion settings for personalized clips: { hunching: 0–4, arm: 0–9, foot: strong foot 'l' or 'r' }.
+let personalSettings = { hunching: 0, arm: 0, foot: 'r' };
+
+/** The playing clip, rebuilt from the clip as read with its hands and personalized turns. */
+function rebuildClip() {
+  if (!bareClip) return;
+  const turns = personalTurns(personalized[animation], personalSettings, bareClip.kmh);
+  clip = withTurns(withHands(bareClip, hands, animation, handChoice), turns, bindFrames);
+}
+
 /** Give the playing clip other hands (see withHands), carrying on from where it is. */
 export function setHandChoice(choice) {
   handChoice = choice;
-  if (bareClip) clip = withHands(bareClip, hands, animation, choice);
+  rebuildClip();
 }
+
+/** Set the player's hunching and arm movement levels and strong foot (any of them) for personalized clips. */
+export function setPersonalSettings(settings) {
+  personalSettings = { ...personalSettings, ...settings };
+  rebuildClip();
+}
+export const currentPersonalSettings = () => personalSettings;
 
 /** { root, bones: Map name -> Bone, staticBone, index: Map Bone -> i, skeleton, rest: Map Bone -> position } */
 let rig = null;

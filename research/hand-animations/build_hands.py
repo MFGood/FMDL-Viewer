@@ -8,6 +8,8 @@ Read only; nothing in the game folder is changed. What it reads:
                 common/anime/FHSequence/bin/Handlbase.bin      12-byte records: motion id, frames, pose
                 common/anime/FHSequence/bin/Handrbase.bin      (same for the right hand)
                 common/anime/FHSequence/bin/Sequenceinfo.bin   motion id -> motion number
+                common/anime/Mbinfo/bin/PersonalizedData.bin   per motion: which parts the player's motion
+                                                               settings change (-> personalized.json)
   dt12_g4.cpk   common/demo/anime/FoxAnim/FixDemo/Animations   the celebrations' file names
   PES2021.exe   name tables: the 4161 gameplay motion files (a motion id >= 0 is an index into it) and the
                 face and hand motion names (a record's pose is an index into the hand part)
@@ -168,7 +170,7 @@ def records(data, side):
 
 def main(game, assets):
     data = os.path.join(game, 'Data')
-    files = cpk_files(os.path.join(data, 'dt13_all.cpk'), r'^common/anime/(FHSequence/bin/(Handlbase|Handrbase|Sequenceinfo)\.bin|FoxAnim/Hand/Animations/.*\.gani)$')
+    files = cpk_files(os.path.join(data, 'dt13_all.cpk'), r'^common/anime/(FHSequence/bin/(Handlbase|Handrbase|Sequenceinfo)\.bin|FoxAnim/Hand/Animations/.*\.gani|Mbinfo/bin/PersonalizedData\.bin)$')
     fixdemo = cpk_files(os.path.join(data, 'dt12_g4.cpk'), r'^common/demo/anime/FoxAnim/FixDemo/Animations/dml_goal_celebrate[^/]*\.gani$')
     exe = Exe(os.path.join(game, 'PES2021.exe'))
     motions = exe.table_with('fk_runup_cristiano')       # gameplay motion files, by motion id
@@ -203,6 +205,23 @@ def main(game, assets):
     with open(out, 'w', newline='\n') as f:
         json.dump({'poses': poses, 'clips': clips}, f, separators=(',', ':'))
     print('wrote', out, len(clips), 'clips with hand poses')
+
+    # The parts the player's hunching and arm movement settings change, per clip (personalized-motion.md):
+    # 32-bit words, motion id - 588 in bits 0-11, "any player" when bit 12 is clear, then spine, left arm
+    # and right arm in bits 13-15. The game takes the last any-player entry for a motion.
+    data, personal = files['common/anime/Mbinfo/bin/PersonalizedData.bin'], {}
+    for (w,) in struct.iter_unpack('<I', data[:len(data) // 4 * 4]):
+        if not w >> 12 & 1:
+            personal[motions[(w & 0xFFF) + 588]] = {'spine': w >> 13 & 1, 'leftarm': w >> 14 & 1, 'rightarm': w >> 15 & 1}
+    flags = {}
+    for path in (p for paths in listed.values() for p in paths if p.endswith('.gani')):
+        p = personal.get(os.path.basename(path)[:-5])
+        if p: flags[path] = p
+    print(sum(any(v.values()) for v in personal.values()), 'of', len(personal), 'personalized motions in the game have a part set')
+    out = os.path.join(assets, 'personalized.json')
+    with open(out, 'w', newline='\n') as f:
+        json.dump(flags, f, indent=1)
+    print('wrote', out, len(flags), 'clips')
 
 if __name__ == '__main__':
     main(sys.argv[1], sys.argv[2])

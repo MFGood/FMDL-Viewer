@@ -1,13 +1,13 @@
 // clip.js — keyframed animation clips on the PES skeleton: .anim text clips and PES's own .gani motions.
-// A clip is { frames, fps, parents, rotations, hip, legsStraight, ground }: rotations (Map bone -> keys,
+// A clip is { frames, fps, parents, rotations, hip, rest, ground }: rotations (Map bone -> keys,
 // [[frame, quaternion], …]) relative to the bone's parent in the clip's own rig (`parents`), and the hip's
-// offset from rest (keys of [x, y, z] in PES axes and meters). Both rigs hold the arms straight out at
-// rest (a T-pose), where PES's rest pose is an A-pose with identity rotations, so each arm is first
-// turned from its A-pose direction to the T-pose one, then by the clip; the .anim rig's legs hang
-// straight down too (legsStraight). Clips play in place, looping. A clip may also carry hand poses
+// offset from rest (keys of [x, y, z] in PES axes and meters). Both rigs hold the arms out at rest (a
+// T-pose) and the legs straight down (`rest`), where PES's rest pose is an A-pose with the legs leaning
+// out, all with identity rotations; so each limb is first turned from PES's rest direction to the rig's,
+// then by the clip. Clips play in place, looping. A clip may also carry hand poses
 // (hands: { l, r }, see withHands), which the fingers blend between as it plays.
 
-import { qMul, qInv, qRotate, qSlerp, qFromTo, norm, sub, forwardKinematics } from './quat.js';
+import { qMul, qInv, qRotate, qSlerp, qFromTo, qAxis, norm, sub, forwardKinematics } from './quat.js';
 import { parseGani } from '../formats/gani.js';
 
 // ---------------------------------------------------------------- .anim
@@ -31,6 +31,9 @@ for (const [side, s] of [['left', 'l'], ['right', 'r']]) Object.assign(ANIM_BONE
   [`${side}_ankle`]: [`sk_foot_${s}`, `${side}_knee`],
 });
 const ANIM_PARENTS = Object.fromEntries(Object.values(ANIM_BONES).map(([bone, parent]) => [bone, parent && ANIM_BONES[parent][0]]));
+
+// Where the .anim rig points each limb at rest, left side (the right mirrors x): arms level, legs straight down.
+const ANIM_REST = { sk_upperarm: [1, 0, 0], sk_forearm: [1, 0, 0], sk_thigh: [0, -1, 0], sk_leg: [0, -1, 0] };
 
 /** .anim axes -> PES axes: (x, y, z) -> (x, z, -y). It's a proper rotation, so quaternions map the same way. */
 const toPes = (v) => [v[0], v[2], -v[1]];
@@ -58,7 +61,7 @@ export function parseAnim(text) {
   if (!rotations.size) throw new Error('No bone keys in this .anim file');
   // The player position is the hip's, travel and all; its height comes from a rig that isn't PES's, so
   // the clip is grounded instead (see placement) and only the height's changes are kept.
-  return { frames, fps: ANIM_FPS, parents: ANIM_PARENTS, rotations, hip: player && withoutTravel(player), legsStraight: true, ground: 'clip' };
+  return { frames, fps: ANIM_FPS, parents: ANIM_PARENTS, rotations, hip: player && withoutTravel(player), rest: ANIM_REST, ground: 'clip' };
 }
 
 /** Position keys with the travel from the first to the last key taken out, so it plays in place but keeps its sway. */
@@ -71,6 +74,13 @@ function withoutTravel(keys) {
 }
 
 // ---------------------------------------------------------------- .gani
+
+// Where the game's animation skeleton (body_anim_skel.ask) points each limb at rest, left side (the right
+// mirrors x): T-pose arms, which aren't quite level in depth, and legs straight down, where PES's lean out.
+const GANI_REST = {
+  sk_upperarm: [0.9954, 0, -0.0958], sk_forearm: [0.9863, 0, 0.165],
+  sk_thigh: [-0.0002, -0.9965, 0.0834], sk_leg: [-0.0002, -0.9944, -0.1056],
+};
 
 // The animation skeleton's parents (PES's player_skeletons.hkx); ROOT is the player's place and facing.
 const GANI_PARENTS = { ROOT: null, sk_root_hip: 'ROOT', dsk_hip: 'sk_root_hip', sk_belly: 'sk_root_hip', sk_chest: 'sk_belly', sk_neck: 'sk_chest', sk_head: 'sk_neck' };
@@ -88,7 +98,10 @@ export function ganiClip(buffer) {
   // ROOT's own travel (the player running across the pitch) is left out, so the clip plays in place.
   // The game's rig and foot IK don't quite match this skeleton, so a planted foot can sink a few
   // centimeters; each frame is lifted just enough to keep the feet out of the floor.
-  return { frames, fps, parents: GANI_PARENTS, rotations, hip, hipFrame: 'ROOT', legsStraight: false, ground: 'frame' };
+  // Its running speed, from how far ROOT travels across the ground (centimeters) over the clip.
+  const travel = tracks.get('ROOT:position'), [first, last] = [travel?.[0], travel?.at(-1)];
+  const kmh = last && last[0] > first[0] ? Math.hypot(last[1][0] - first[1][0], last[1][2] - first[1][2]) / 100 / ((last[0] - first[0]) / fps) * 3.6 : 0;
+  return { frames, fps, parents: GANI_PARENTS, rotations, hip, hipFrame: 'ROOT', rest: GANI_REST, ground: 'frame', kmh };
 }
 
 // ---------------------------------------------------------------- hands
@@ -125,6 +138,22 @@ export function withHands(clip, hands, path, choice = CLIP_HANDS) {
   return { ...clip, hands: { l: side('l'), r: side('r') } };
 }
 
+/**
+ * The clip with the game's personalized turns (personalTurns: [{ bone, axis in its bind frame, degrees }])
+ * held on top of it. `bindFrames` ({ bone: quaternion }, from PES's body.skl) bring each axis into rest space.
+ */
+export function withTurns(clip, turns, bindFrames) {
+  const list = turns.filter((t) => bindFrames?.[t.bone])
+    .map(({ bone, axis, degrees }) => ({ bone, axis: qRotate(bindFrames[bone], axis), angle: degrees * Math.PI / 180 }));
+  return { ...clip, turns: list.length ? list : null };
+}
+
+// Whether `bone` is `top` or hangs below it in skeleton `sk`.
+function under(sk, bone, top) {
+  for (let b = bone; b; b = sk[b]?.parent) if (b === top) return true;
+  return false;
+}
+
 /** A hand's pose (Map bone -> local rotation) at frame f, or null before it has any. */
 function handPose(records, f) {
   let pose = null, end = 0;
@@ -154,25 +183,29 @@ function sample(keys, f, slerp) {
 /** Clip length in seconds (at least one frame). */
 export const clipDuration = (clip) => Math.max(1, clip.frames) / clip.fps;
 
-// Turn from each limb bone's A-pose direction to the rig's rest one, in rest space; the hand follows its forearm.
+// Turn from each limb bone's PES rest direction to the rig's (`rest`), in rest space. The hand follows its
+// forearm; the foot keeps PES's rest, flat on the ground in both.
+const CHILD = { sk_upperarm: 'sk_forearm', sk_forearm: 'sk_hand', sk_thigh: 'sk_leg', sk_leg: 'sk_foot' };
 const turnCache = new WeakMap();
-function restTurns(sk, legsStraight) {
+function restTurns(sk, rest) {
   let cached = turnCache.get(sk);
-  if (!cached) turnCache.set(sk, (cached = {}));
-  if (cached[legsStraight]) return cached[legsStraight];
+  if (!cached) turnCache.set(sk, (cached = new Map()));
+  if (cached.has(rest)) return cached.get(rest);
   const turns = new Map(), dir = (a, b) => (sk[a] && sk[b] ? norm(sub(sk[b].pos, sk[a].pos)) : null);
-  for (const [s, out] of [['l', [1, 0, 0]], ['r', [-1, 0, 0]]]) {
-    const limbs = [[`sk_upperarm_${s}`, `sk_forearm_${s}`, out], [`sk_forearm_${s}`, `sk_hand_${s}`, out]];
-    if (legsStraight) limbs.push([`sk_thigh_${s}`, `sk_leg_${s}`, [0, -1, 0]], [`sk_leg_${s}`, `sk_foot_${s}`, [0, -1, 0]]);
-    for (const [from, to, target] of limbs) { const d = dir(from, to); if (d) turns.set(from, qFromTo(d, target)); }
+  for (const [s, mirror] of [['l', 1], ['r', -1]]) {
+    for (const [limb, [x, y, z]] of Object.entries(rest)) {
+      const d = dir(`${limb}_${s}`, `${CHILD[limb]}_${s}`);
+      if (d) turns.set(`${limb}_${s}`, qFromTo(d, [x * mirror, y, z]));
+    }
     if (turns.has(`sk_forearm_${s}`)) turns.set(`sk_hand_${s}`, turns.get(`sk_forearm_${s}`));
   }
-  return (cached[legsStraight] = turns);
+  cached.set(rest, turns);
+  return turns;
 }
 
 /** Local rotations (Map PES bone -> quaternion relative to its PES parent) at frame f, and the hip's offset. */
 function framePose(clip, f, sk) {
-  const turns = restTurns(sk, clip.legsStraight), clipWorld = new Map();
+  const turns = restTurns(sk, clip.rest), clipWorld = new Map();
   const worldOf = (bone) => {
     if (clipWorld.has(bone)) return clipWorld.get(bone);
     const parent = clip.parents[bone], keys = clip.rotations.get(bone);
@@ -184,6 +217,13 @@ function framePose(clip, f, sk) {
   // PES world rotations of the bones the clip drives; the rest keep their parent's.
   const world = new Map();
   for (const bone of Object.keys(clip.parents)) if (sk[bone]) world.set(bone, qMul(worldOf(bone), turns.get(bone) || [0, 0, 0, 1]));
+  // The personalized turns, as the game does them: each bone turns about its axis where the pose has
+  // carried it, taking the bones below with it.
+  for (const { bone, axis, angle } of clip.turns || []) {
+    if (!world.has(bone)) continue;
+    const turn = qAxis(qRotate(world.get(bone), axis), angle);
+    for (const [b, q] of world) if (under(sk, b, bone)) world.set(b, qMul(turn, q));
+  }
   // The fingers, under PES's hand, with their rotations brought over from the game's hand rig.
   for (const s of clip.hands ? ['l', 'r'] : []) {
     const pose = handPose(clip.hands[s], f), hand = `sk_hand_${s}`;

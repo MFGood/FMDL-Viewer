@@ -5,8 +5,9 @@
 import { $ } from '../core/dom.js';
 import { flashStatus } from '../core/notices.js';
 import { options } from '../core/options.js';
-import { listClips, setAnimation, currentAnimation, currentClipInfo, handOptions, setHandChoice, RUN_CYCLE } from '../animation/rig.js';
+import { listClips, setAnimation, currentAnimation, currentClipInfo, currentPersonalized, setPersonalSettings, currentPersonalSettings, handOptions, setHandChoice, RUN_CYCLE } from '../animation/rig.js';
 import { CLIP_HANDS, OPEN_HANDS, DEFAULT_HAND_POSE } from '../animation/clip.js';
+import { HUNCHING_LEVELS, ARM_LEVELS } from '../animation/personalize.js';
 
 const STORAGE_KEY = 'animation';
 let categories = {}; // { category: [path, …] }
@@ -45,7 +46,29 @@ function renderHands() {
 
 function renderNote() {
   const info = currentClipInfo();
-  $('animNote').textContent = info ? `${info.seconds.toFixed(1)} s · ${info.frames} frames at ${info.fps} fps` : '';
+  $('animNote').textContent = info ? `${info.seconds.toFixed(1)} s · ${info.frames} frames at ${info.fps} fps${info.kmh ? ` · ${Math.round(info.kmh)} km/h` : ''}` : '';
+  const parts = currentPersonalized();
+  $('animFlags').hidden = !parts;
+  for (const box of $('animFlags').querySelectorAll('[data-part]')) box.checked = !!parts?.[box.dataset.part];
+}
+
+// The player's hunching and arm movement levels and strong foot, for clips the game personalizes; remembered.
+const SETTINGS_KEY = 'animationPersonal';
+
+function initPersonalSettings() {
+  const levels = (n) => Array.from({ length: n }, (_, i) => new Option(i ? `Level ${i}` : 'Off', i));
+  $('animHunching').replaceChildren(...levels(HUNCHING_LEVELS));
+  $('animArm').replaceChildren(...levels(ARM_LEVELS));
+  try { setPersonalSettings(JSON.parse(localStorage.getItem(SETTINGS_KEY)) || {}); } catch {}
+  const shown = currentPersonalSettings();
+  $('animHunching').value = shown.hunching;
+  $('animArm').value = shown.arm;
+  $('animFoot').value = shown.foot;
+  const changed = () => {
+    setPersonalSettings({ hunching: Number($('animHunching').value), arm: Number($('animArm').value), foot: $('animFoot').value });
+    try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(currentPersonalSettings())); } catch {}
+  };
+  for (const id of ['animHunching', 'animArm', 'animFoot']) $(id).addEventListener('change', changed);
 }
 
 /**
@@ -89,6 +112,7 @@ export async function initAnimationPicker() {
   });
   $('animSelect').addEventListener('change', () => picked($('animSelect').value));
   $('animHands').addEventListener('change', () => setHandChoice($('animHands').value));
+  initPersonalSettings();
   // ‹ and › beside each list step to the previous or next entry, round from the end to the start.
   for (const button of document.querySelectorAll('.anim-picker [data-step]')) {
     button.addEventListener('click', () => {

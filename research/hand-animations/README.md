@@ -55,8 +55,13 @@ come from `animation_tool.py`, a GANI editor that was reverse engineered from th
 celebrations' hands come from FHSequence, as below.
 
 **Clip header:** a body `.gani` has 27 channels (PES 2018–2021 layout, see `js/formats/gani.js`). Positions
-are in centimeters. The arms start from a T-pose (the legs don't), so the viewer turns PES's A-pose arms
-before applying the rotations.
+are in centimeters. Rotations start from the rest pose in `body_anim_skel.ask`, with identity rotations:
+- **Arms:** a T-pose, not quite level in depth. The forearm dips 5.5° back and the hand 9.5° forward.
+- **Legs:** straight down. PES's legs lean about 7° out from the hip.
+
+The viewer turns PES's A-pose arms and legs onto those directions (`GANI_REST` in `js/animation/clip.js`)
+before applying the rotations. The feet keep PES's rest, flat in both. Before the legs were turned too, the
+feet landed about 17 cm out from the middle in a run instead of about 7 cm.
 
 ## Hand tables (`Handlbase.bin` / `Handrbase.bin`)
 
@@ -113,6 +118,32 @@ other.
 **Checked:** in a numeric check on the skeleton, `nigiri` pulls the fingertips from 15 cm to 8–9 cm from the
 wrist, curling the same way as the run cycle's hand-tuned fist. `open_full` stays at rest, and the mirrored
 right hand matches the left.
+
+## Personalized parts (`personalized.json`)
+
+`dt13_all.cpk` `common/anime/Mbinfo/json/anim_infos.json` (also `Mbinfo/bin/PersonalizedData.bin`) holds
+info for each of the game's 4,907 motions. Its `personalized_data` entries are
+`{player_id, spine, leftarm, rightarm}`. These are presumably the parts the player's motion settings (`mo_hunchd`,
+`mo_hunchr`, `mo_armd`, `mo_armr` in the save) are allowed to change.
+
+- 96 motions have an entry, and every `player_id` is −1.
+- Only 12 have any part set, all three at once: the hunching runs `run_3_3`, `run_4_4`, `run_5_5`,
+  `parallel_3_3_v2`, `parallel_4_4_v2` and the seven `dribblerun_3_3_*`. These are the viewer's Hunching clips.
+- The other 84 are dribble loops, feints and traps with all parts at 0. Our free kick and penalty clips have
+  no entry, and the celebrations (FixDemo) aren't in the file.
+
+`build_hands.py` reads the flags from `PersonalizedData.bin`, the file the game itself loads. That file
+also flags `run_2_2`, which `anim_infos.json` doesn't. The script writes the viewer's entries to
+`personalized.json`.
+
+The motion data doesn't say how the game changes the back and arms. That's in the exe and is written up in
+[personalized-motion.md](personalized-motion.md). In short, each flagged part gets the player's hunching
+or arm movement level. The level picks target angles from tables in the exe: 4 spine joints bend forward
+or back, and 7 turns per arm (upper arm, elbow, hand). These turns go on top of the clip.
+
+The viewer applies them with `js/animation/personalize.js`. The Animation tab has a level picker for each
+setting, plus the strong foot. The "fast" tables switch in above 22 km/h, measured from how far the clip's
+ROOT travels.
 
 ## Face tables (not worked out)
 

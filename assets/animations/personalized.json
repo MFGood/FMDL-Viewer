@@ -1,0 +1,67 @@
+{
+ "hunching/dribblerun_3_3_000_in.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/dribblerun_3_3_000_mid_out_ver2.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/dribblerun_3_3_000_out_near.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/dribblerun_3_3_000_out_ver3.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/dribblerun_3_3_000_y0_out_ver13.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/dribblerun_3_3_022_in_ver1.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/dribblerun_3_3_f022_y0_out_ver12.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/parallel_3_3_v2.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/parallel_4_4_v2.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/run_2_2.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/run_3_3.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/run_4_4.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ },
+ "hunching/run_5_5.gani": {
+  "spine": 1,
+  "leftarm": 1,
+  "rightarm": 1
+ }
+}
