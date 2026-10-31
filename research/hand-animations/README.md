@@ -98,7 +98,9 @@ Sort the FixDemo `dml_goal_celebrate*` names (without `_eyes_target`); `number -
   these the "negative gameplay" ids, whose number is the positive id.
 
 **Free kicks and penalties:** all 37 get hand poses. `pk_idle_ronaldinho_2` and `pk_runup_ronaldinho_2` aren't
-in the exe's lists. The hunching runs (`run_*`, `dribblerun_*`, `parallel_*`) have no hand records.
+in the exe's lists. The hunching runs (`run_*`, `dribblerun_*`, `parallel_*`) have no hand records. Clips without any (those
+runs, the `.anim` clips) get `move_nigiri` in the viewer. That's a guess: the game must use some pose for them,
+but where it picks one hasn't been found.
 
 **Checked:** in a numeric check on the skeleton, `nigiri` pulls the fingertips from 15 cm to 8–9 cm from the
 wrist, curling the same way as the run cycle's hand-tuned fist. `open_full` stays at rest, and the mirrored

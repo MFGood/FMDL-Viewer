@@ -99,14 +99,18 @@ const FINGERS = ['thumb_mata', 'thumb_mcp', 'thumb_pip', ...['index', 'middle', 
 /** A left-hand pose ({ skh_…_l: quaternion }) for the right hand: mirrored across the body's middle. */
 const mirrorPose = (pose) => Object.fromEntries(Object.entries(pose).map(([bone, q]) => [bone.replace(/_l$/, '_r'), [q[0], -q[1], -q[2], q[3]]]));
 
+// The pose for clips the game gives no hand poses (its runs, and the .anim clips): a guess, as where the game
+// picks one for those isn't known. move_nigiri is the loose running grip most free kicks and penalties use.
+const DEFAULT_HAND_POSE = 'move_nigiri';
+
 /**
  * The clip with hand poses from hands.json ({ poses: { name: left-hand pose }, clips: { path: { l, r } } }), where
  * each hand's records are [start frame, end frame, pose name]: the hand takes each pose from its start, blending
- * from the one before while their frames overlap, and holds the last.
+ * from the one before while their frames overlap, and holds the last. Clips without any get DEFAULT_HAND_POSE.
  */
 export function withHands(clip, hands, path) {
-  const records = hands?.clips[path];
-  if (!records) return clip;
+  if (!hands) return clip;
+  const records = hands.clips[path] || { l: [[0, 0, DEFAULT_HAND_POSE]], r: [[0, 0, DEFAULT_HAND_POSE]] };
   const side = (s) => records[s].map(([start, end, name]) => [start, end, s === 'l' ? hands.poses[name] : mirrorPose(hands.poses[name])]).filter((r) => r[2]);
   return { ...clip, hands: { l: side('l'), r: side('r') } };
 }

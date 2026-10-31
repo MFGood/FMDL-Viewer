@@ -42,10 +42,15 @@ async function pick(path) {
   renderNote();
 }
 
-async function picked(path) {
-  await pick(path);
-  try { localStorage.setItem(STORAGE_KEY, currentAnimation()); } catch {}
-  if (!options.run) $('tRun').click(); // turns it on (and builds the rig) through the checkbox
+// Picks load one after another, so the last one picked is the one that plays even if an earlier one loads slower.
+let picking = Promise.resolve();
+
+function picked(path) {
+  picking = picking.then(async () => {
+    await pick(path);
+    try { localStorage.setItem(STORAGE_KEY, currentAnimation()); } catch {}
+    if (!options.run) $('tRun').click(); // turns it on (and builds the rig) through the checkbox
+  });
 }
 
 export async function initAnimationPicker() {
@@ -54,6 +59,7 @@ export async function initAnimationPicker() {
   $('animCategory').append(...Object.keys(categories).map((c) => new Option(c, c)));
   $('animCategory').addEventListener('change', () => {
     const category = $('animCategory').value;
+    showClips(category); // straight away, not once its first clip has loaded
     picked(category === RUN_CYCLE ? RUN_CYCLE : categories[category][0]);
   });
   $('animSelect').addEventListener('change', () => picked($('animSelect').value));

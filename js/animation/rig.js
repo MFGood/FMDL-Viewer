@@ -40,7 +40,7 @@ export const currentClipInfo = () => clip && { seconds: clipDuration(clip), fram
 export const listClips = () => fetchAsset(`${CLIP_FOLDER}/clips.json`).then((buffer) => JSON.parse(new TextDecoder().decode(buffer)));
 
 // The game's hand poses and which clips use them (built by research/hand-animations), loaded with the first
-// .gani clip; null if it won't load, and the hands then stay open.
+// clip; null if it won't load, and the hands then stay open.
 let handsLoading = null;
 const loadHands = () => (handsLoading ||= fetchAsset(`${CLIP_FOLDER}/hands.json`)
   .then((buffer) => JSON.parse(new TextDecoder().decode(buffer)), () => null));
@@ -49,7 +49,7 @@ const loadHands = () => (handsLoading ||= fetchAsset(`${CLIP_FOLDER}/hands.json`
 export async function setAnimation(path) {
   if (path === RUN_CYCLE) { animation = RUN_CYCLE; clip = null; return; }
   const buffer = await fetchAsset(`${CLIP_FOLDER}/${path}`);
-  const parsed = /\.gani$/i.test(path) ? withHands(ganiClip(buffer), await loadHands(), path) : parseAnim(new TextDecoder().decode(buffer));
+  const parsed = withHands(/\.gani$/i.test(path) ? ganiClip(buffer) : parseAnim(new TextDecoder().decode(buffer)), await loadHands(), path);
   animation = path; clip = parsed; clipStart = null;
 }
 
