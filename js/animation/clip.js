@@ -96,6 +96,11 @@ export function ganiClip(buffer) {
 // The finger joints, parents before children (the game's hand rig and PES's skeleton agree on the parents).
 const FINGERS = ['thumb_mata', 'thumb_mcp', 'thumb_pip', ...['index', 'middle', 'ring', 'pinky'].flatMap((f) => ['mata', 'mcp', 'pip', 'dip'].map((j) => `${f}_${j}`))];
 
+// The game's hand rig (hand_anim_skel) lies turned from PES's hand: this rotation takes its rest positions
+// onto PES's left-hand bones exactly (a fit of all 19 joints, research/hand-animations). A finger's rotation
+// in the game's rig is HAND_RIG · q · HAND_RIG⁻¹ in PES's; the right hand's rig is its mirror.
+const HAND_RIG = { l: [0.62851, -0.26665, -0.27235, 0.67802], r: [0.62851, 0.26665, 0.27235, 0.67802] };
+
 /** A left-hand pose ({ skh_…_l: quaternion }) for the right hand: mirrored across the body's middle. */
 const mirrorPose = (pose) => Object.fromEntries(Object.entries(pose).map(([bone, q]) => [bone.replace(/_l$/, '_r'), [q[0], -q[1], -q[2], q[3]]]));
 
@@ -174,16 +179,15 @@ function framePose(clip, f, sk) {
   // PES world rotations of the bones the clip drives; the rest keep their parent's.
   const world = new Map();
   for (const bone of Object.keys(clip.parents)) if (sk[bone]) world.set(bone, qMul(worldOf(bone), turns.get(bone) || [0, 0, 0, 1]));
-  // The fingers, posed in the clip's rig (where the hand's rest is the T-pose's) under its hand.
+  // The fingers, under PES's hand, with their rotations brought over from the game's hand rig.
   for (const s of clip.hands ? ['l', 'r'] : []) {
     const pose = handPose(clip.hands[s], f), hand = `sk_hand_${s}`;
-    if (!pose || !sk[hand]) continue;
-    const fingerWorld = new Map([[hand, worldOf(hand)]]);
+    if (!pose || !world.has(hand)) continue;
+    const rig = HAND_RIG[s], rigInverse = qInv(rig);
     for (const joint of FINGERS) {
       const bone = `skh_${joint}_${s}`, parent = sk[bone]?.parent;
-      if (!parent || !fingerWorld.has(parent)) continue;
-      fingerWorld.set(bone, qMul(fingerWorld.get(parent), pose.get(bone) || [0, 0, 0, 1]));
-      world.set(bone, qMul(fingerWorld.get(bone), turns.get(hand) || [0, 0, 0, 1]));
+      if (!parent || !world.has(parent)) continue;
+      world.set(bone, qMul(world.get(parent), qMul(qMul(rig, pose.get(bone) || [0, 0, 0, 1]), rigInverse)));
     }
   }
   const local = new Map(), worldAll = new Map();

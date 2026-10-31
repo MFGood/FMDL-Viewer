@@ -102,6 +102,14 @@ in the exe's lists. The hunching runs (`run_*`, `dribblerun_*`, `parallel_*`) ha
 runs, the `.anim` clips) get `move_nigiri` in the viewer. That's a guess: the game must use some pose for them,
 but where it picks one hasn't been found.
 
+**Hand rig orientation:** the hand poses are rotations in the game's own hand rig (`hand_anim_skel`, rest
+offsets in `animation_tool.py`). That rig's rest layout lands on PES's left-hand bones exactly (0 cm residual over
+all 19 joints) once turned by the quaternion `[0.62851, -0.26665, -0.27235, 0.67802]` (x, y, z, w), about 95°.
+It's the forearm's A-to-T turn plus a roll of about 90°: the rig's +Y, thumb up, is PES's +Z. So a finger's PES
+rotation is `R · q · R⁻¹` under PES's hand, mirrored (`[x, -y, -z, w]`) for the right. The first version
+reused the arm's T-pose turn instead, which missed the roll and curled the fingers sideways across each
+other.
+
 **Checked:** in a numeric check on the skeleton, `nigiri` pulls the fingertips from 15 cm to 8–9 cm from the
 wrist, curling the same way as the run cycle's hand-tuned fist. `open_full` stays at rest, and the mirrored
 right hand matches the left.
