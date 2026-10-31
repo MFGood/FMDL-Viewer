@@ -23,6 +23,8 @@ import { renderPlayerPanel } from './ui/details.js';
 import { initSettings, loadSave } from './ui/settings.js';
 import { initCapture } from './ui/capture.js';
 import { initCheck } from './ui/check.js';
+import { initTabs } from './ui/tabs.js';
+import { initAnimationPicker } from './ui/animation.js';
 import { openBatch, reload, canReload, openSample, restoreFolder } from './open/opening.js';
 import { pickedBatch, droppedBatch, batchFiles, folderBatch, canReadFolder } from './open/gather.js';
 
@@ -31,6 +33,8 @@ restoreFolder(); // before the save, so its teams aren't listed only once the sa
 initSettings();
 initCapture();
 initCheck();
+initTabs();
+initAnimationPicker();
 makeGrid();
 
 // ---------------------------------------------------------------- display options

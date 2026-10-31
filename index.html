@@ -65,38 +65,75 @@
     <div id="help" class="control-hint"></div>
   </div>
   <aside id="details">
-    <section>
-      <div class="stats">
-        <div class="stat"><b id="sVerts">0</b><small>Vertices</small></div>
-        <div class="stat"><b id="sTris">0</b><small>Triangles</small></div>
-        <div class="stat"><b id="sMeshes">0</b><small>Meshes</small></div>
-      </div>
-    </section>
-    <section id="kitSection" hidden>
-      <h2>Kits</h2>
-      <div class="kits" id="kits"></div>
-      <p class="hint control-hint"><kbd>Ctrl</kbd> + <kbd>←</kbd> / <kbd>→</kbd> for the previous / next kit</p>
-    </section>
-    <section id="playerSection" hidden>
-      <h2>This player</h2>
-      <div class="toggles">
-        <label class="chk"><input type="checkbox" id="tPlayerDefaults"> Add default boots and hands</label>
-      </div>
-      <p class="hint" id="playerDefaultsNote"></p>
-    </section>
-    <section id="bodySection" hidden>
-      <h2>Body shape</h2>
-      <div class="body-sliders" id="bodySliders"></div>
-      <p class="hint" id="bodyNote"></p>
-    </section>
-    <section id="faceSection" hidden>
-      <h2>Face</h2>
-      <div class="toggles">
-        <label class="chk"><input type="checkbox" id="tEditFace"> Edited face</label>
-      </div>
-      <button type="button" id="openFaceEditor" hidden>Face editor</button>
-      <p class="hint" id="faceNote"></p>
-    </section>
+    <div class="tabs" role="tablist" aria-label="Details">
+      <button type="button" role="tab" id="tabPlayer" data-tab="player" aria-controls="panelPlayer">Player</button>
+      <button type="button" role="tab" id="tabAnimation" data-tab="animation" aria-controls="panelAnimation">Animation</button>
+      <button type="button" role="tab" id="tabModel" data-tab="model" aria-controls="panelModel">Model</button>
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panelPlayer" aria-labelledby="tabPlayer">
+      <section id="kitSection" hidden>
+        <h2>Kits</h2>
+        <div class="kits" id="kits"></div>
+        <p class="hint control-hint"><kbd>Ctrl</kbd> + <kbd>←</kbd> / <kbd>→</kbd> for the previous / next kit</p>
+      </section>
+      <section id="playerSection" hidden>
+        <h2>This player</h2>
+        <div class="toggles">
+          <label class="chk"><input type="checkbox" id="tPlayerDefaults"> Add default boots and hands</label>
+        </div>
+        <p class="hint" id="playerDefaultsNote"></p>
+      </section>
+      <section id="bodySection" hidden>
+        <h2>Body shape</h2>
+        <div class="body-sliders" id="bodySliders"></div>
+        <p class="hint" id="bodyNote"></p>
+      </section>
+      <section id="faceSection" hidden>
+        <h2>Face</h2>
+        <div class="toggles">
+          <label class="chk"><input type="checkbox" id="tEditFace"> Edited face</label>
+        </div>
+        <button type="button" id="openFaceEditor" hidden>Face editor</button>
+        <p class="hint" id="faceNote"></p>
+      </section>
+      <section id="skinSection" hidden>
+        <h2>Skin color</h2>
+        <div class="kits" id="skins"></div>
+      </section>
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panelAnimation" aria-labelledby="tabAnimation">
+      <section>
+        <div class="toggles">
+          <label class="chk"><input type="checkbox" id="tRun"> Play animation</label>
+        </div>
+        <div class="anim-picker">
+          <label for="animCategory">Category</label>
+          <select id="animCategory"><option value="run">Run cycle</option></select>
+          <label for="animSelect">Clip</label>
+          <select id="animSelect"></select>
+        </div>
+        <p class="hint" id="animNote"></p>
+        <p class="hint">Plays on the full PES skeleton, to see how the model's weights deform. The run cycle is procedural; clips play in place.</p>
+      </section>
+    </div>
+    <div class="tab-panel" role="tabpanel" id="panelModel" aria-labelledby="tabModel">
+      <section>
+        <div class="stats">
+          <div class="stat"><b id="sVerts">0</b><small>Vertices</small></div>
+          <div class="stat"><b id="sTris">0</b><small>Triangles</small></div>
+          <div class="stat"><b id="sMeshes">0</b><small>Meshes</small></div>
+        </div>
+      </section>
+      <section>
+        <h2>Models</h2>
+        <div class="tree" id="tree"></div>
+      </section>
+      <section>
+        <h2>Materials</h2>
+        <div id="mats"></div>
+        <p class="hint">Green dot: texture found. Amber: missing. Gray: not drawn by the viewer.</p>
+      </section>
+    </div>
     <section id="faceEditor">
       <div class="face-editor-head">
         <h2>Face editor</h2>
@@ -105,19 +142,6 @@
       <p class="hint control-hint"><kbd>.</kbd> brings the camera back to the face</p>
       <div id="faceSliders"></div>
       <p class="hint"><span id="faceEditorNote"></span> <button type="button" class="linkish" id="resetFace">Reset</button></p>
-    </section>
-    <section id="skinSection" hidden>
-      <h2>Skin color</h2>
-      <div class="kits" id="skins"></div>
-    </section>
-    <section>
-      <h2>Models</h2>
-      <div class="tree" id="tree"></div>
-    </section>
-    <section>
-      <h2>Materials</h2>
-      <div id="mats"></div>
-      <p class="hint">Green dot: texture found. Amber: missing. Gray: not drawn by the viewer.</p>
     </section>
   </aside>
   <div id="capture" class="overlay-panel" role="dialog" aria-label="Capture" hidden>
@@ -196,7 +220,6 @@
         <label class="chk"><input type="checkbox" id="tBox"> Bounding boxes</label>
         <label class="chk"><input type="checkbox" id="tBones"> Bone positions</label>
         <label class="chk"><input type="checkbox" id="tAnim" checked> Animate UV scroll / step</label>
-        <label class="chk" title="A simple run cycle on the full PES skeleton, to see how the model's weights deform."><input type="checkbox" id="tRun"> Run animation</label>
         <label class="chk"><input type="checkbox" id="tGrid" checked> Ground grid</label>
         <label class="chk" title="The key and mouse hints for switching players and kits and for moving the view. The full list stays under Navigation."><input type="checkbox" id="tHints" checked> Control hints</label>
         <div class="chk-row">

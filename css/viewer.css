@@ -325,6 +325,67 @@ label.chk {
   min-width: 0;
 }
 
+/* the details pane's tabs */
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin: -4px -16px 0;
+  padding: 0 12px;
+  position: sticky;
+  top: -14px;
+  z-index: 1;
+  background: var(--panel);
+}
+
+.tabs button {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  padding: 8px 8px 6px;
+  margin-bottom: -1px;
+  font: 700 13px var(--display);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+
+.tabs button:hover {
+  color: var(--fg);
+  background: none;
+  border-bottom-color: var(--line);
+}
+
+.tabs button[aria-selected="true"] {
+  color: var(--fg);
+  border-bottom-color: var(--accent);
+}
+
+.tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.tab-panel[hidden] {
+  display: none;
+}
+
+.anim-picker {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 6px 10px;
+  align-items: center;
+  margin: 10px 0 6px;
+  font-size: 13px;
+}
+
+.anim-picker select {
+  width: 100%;
+  min-width: 0;
+}
+
 input[type=color] {
   width: 32px;
   height: 20px;
@@ -786,7 +847,7 @@ button.player:hover {
 }
 
 /* the face editor: replaces the details pane's sections while it's open */
-#faceEditor, #details.face-editing > section:not(#faceEditor) {
+#faceEditor, #details.face-editing > :not(#faceEditor) {
   display: none;
 }
 

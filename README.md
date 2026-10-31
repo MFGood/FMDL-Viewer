@@ -14,7 +14,7 @@ To access a static hosted version of the tool, go to <https://mfgood.github.io/F
 - **Materials:** shaders follow the Fox Engine materials, including unlit, glass, metallic, two-sided and transparent ones. UV scroll and UV step materials animate, including timing textures, so you get a quick preview of animation changes.
 - **Kits:** switch between outfield and GK kits. The kit you pick stays selected as you move between players.
 - **Default models:** players with only a face model are shown with a default PES 17 or PES 21 body and hands. Skin color can be picked per player, including the player's own custom skin textures, and the defaults can be turned off globally or per player.
-- **Run animation:** a simple run animation Claude came up with after a bunch of trial and error. The helper bones (shorts, sleeves, shoulders, collar…) move the way PES moves them, so kits deform as they do in game.
+- **Animation:** a simple procedural run cycle, or one of the bundled clips, picked by category under the details pane's Animation tab and played in place: idle, walk, sprint and dribble `.anim` clips, and PES 2021 free kick, penalty kick, hunching and goal celebration `.gani` motions. The `.gani` motions play the game's hand poses with them where the game has them (see `research/hand-animations`). The helper bones (shorts, sleeves, shoulders, collar…) move the way PES moves them, so kits deform as they do in game.
 - **Body shape:** PES's 14 physique settings as sliders, scaling the skeleton the way PES 2016 does.
 - **Face editor:** Pre-Fox players without a face model of their own get PES 16's editable face, with its eyes, mouth, neck and head, and the edit hair their save settings pick when their face folder has no hair. With Edited face on (`b_edit_face` in the save), the face editor frames the face and turns the details pane into the game's face sliders, shaping the face, eyes and mouth the way PES 2016 does, followed by selectors for the hair, eyebrows, beard and skin details that the game paints onto the face.
 - **Settings:** the cog at the top right opens the global settings: display options, default models, a PES save file and navigation. They're remembered in the browser between visits.
@@ -76,6 +76,7 @@ js/
     texture-files.js       .ftex / .dds readers (Ftex.py port)
     block-decode.js        DXT / BC4 / BC5 / BC7 decoding to RGBA
     aet.js                 aesthetics export layout: players, kits, texture lookup rules
+    gani.js                Fox Engine .gani body motions (PES 2018–2021)
     pes_save.js            PES 15–21 save files (EDIT.bin / EDIT00000000): read and write players and teams
   export/
     players.js             per-player rules: default models, skin color, roster names
@@ -98,12 +99,15 @@ js/
   animation/
     quat.js                vector / quaternion helpers
     run-cycle.js           procedural run cycle on the PES skeleton
+    clip.js                .anim and .gani clips (assets/animations, listed in its clips.json) on the PES skeleton
     helper-bones.js        PES's helper-bone drivers (shorts, sleeves, shoulders, collar…), ported from the game
     body-shape.js          PES's physique settings as per-bone scales, from the game's tables
     face-shape.js          PES 16's face sliders on its editable face (faceHi), from the game's tables
-    rig.js                 skinned copies of the meshes, driven by the run cycle and body shape
+    rig.js                 skinned copies of the meshes, driven by the run cycle or a clip and the body shape
   ui/
     details.js             right-hand panel: counts, kits, skin color, model tree, materials
+    tabs.js                the right-hand panel's Player, Animation and Model tabs
+    animation.js           the Animation tab's category and clip picker
     team.js                left-hand panel: team, players, switching players
     settings.js            settings panel (cog button): display options, default models, navigation
     body-shape.js          the Body shape sliders

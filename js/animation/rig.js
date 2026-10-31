@@ -1,6 +1,7 @@
-// rig.js — plays the run cycle and shows the body shape on the loaded models. Each mesh with bone weights
-// gets a skinned copy bound to a rig of the full PES skeleton; the copies are shown instead of the rigid
-// meshes while the run animation is on or a body shape is set (standing at rest if it isn't running).
+// rig.js — plays the animation (the run cycle or an .anim clip) and shows the body shape on the loaded models.
+// Each mesh with bone weights gets a skinned copy bound to a rig of the full PES skeleton; the copies are
+// shown instead of the rigid meshes while the animation is on or a body shape is set (standing at rest if
+// it isn't playing).
 
 import * as THREE from 'three';
 import { fetchAsset } from '../core/files.js';
@@ -8,6 +9,7 @@ import { options } from '../core/options.js';
 import { state } from '../core/state.js';
 import { scene } from '../scene/stage.js';
 import { runPose } from './run-cycle.js';
+import { parseAnim, ganiClip, withHands, clipPose, clipDuration } from './clip.js';
 import { helperBoneMatrices } from './helper-bones.js';
 import { currentShape, applyBodyShape, shoulderHeightOf } from './body-shape.js';
 
@@ -25,17 +27,43 @@ function loadSkeleton() {
   return skeletonLoading;
 }
 
+// The animation played: the run cycle (RUN_CYCLE) or a clip's path under CLIP_FOLDER (.anim or .gani), and
+// that clip once loaded. Clips start from their first frame when picked.
+export const RUN_CYCLE = 'run', CLIP_FOLDER = 'assets/animations';
+let animation = RUN_CYCLE, clip = null, clipStart = null;
+export const currentAnimation = () => animation;
+
+/** The playing clip's length: { seconds, frames, fps }, or null for the run cycle. */
+export const currentClipInfo = () => clip && { seconds: clipDuration(clip), frames: clip.frames, fps: clip.fps };
+
+/** The clips that come with the viewer, by category: { category: [path under CLIP_FOLDER, …] } (its clips.json). */
+export const listClips = () => fetchAsset(`${CLIP_FOLDER}/clips.json`).then((buffer) => JSON.parse(new TextDecoder().decode(buffer)));
+
+// The game's hand poses and which clips use them (built by research/hand-animations), loaded with the first
+// .gani clip; null if it won't load, and the hands then stay open.
+let handsLoading = null;
+const loadHands = () => (handsLoading ||= fetchAsset(`${CLIP_FOLDER}/hands.json`)
+  .then((buffer) => JSON.parse(new TextDecoder().decode(buffer)), () => null));
+
+/** Play the run cycle (RUN_CYCLE) or the clip at `path` under CLIP_FOLDER. Throws if the clip won't load. */
+export async function setAnimation(path) {
+  if (path === RUN_CYCLE) { animation = RUN_CYCLE; clip = null; return; }
+  const buffer = await fetchAsset(`${CLIP_FOLDER}/${path}`);
+  const parsed = /\.gani$/i.test(path) ? withHands(ganiClip(buffer), await loadHands(), path) : parseAnim(new TextDecoder().decode(buffer));
+  animation = path; clip = parsed; clipStart = null;
+}
+
 /** { root, bones: Map name -> Bone, staticBone, index: Map Bone -> i, skeleton, rest: Map Bone -> position } */
 let rig = null;
 export const currentRig = () => rig;
 
-/** Whether the loaded models need the rig: the run animation is on, or a body shape is set. */
+/** Whether the loaded models need the rig: the animation is on, or a body shape is set. */
 export const wantRig = () => options.run || !!currentShape();
 
 /** True while the rig is built and its skinned copies are shown. */
 export const rigged = () => !!rig;
 
-/** True while the run animation is on and a rig is built. */
+/** True while the animation is on and a rig is built. */
 export const running = () => options.run && !!rig;
 
 /** A rig of the PES skeleton plus any bone the loaded models use that it doesn't have. */
@@ -176,11 +204,12 @@ export function applySkinWeights() {
   }
 }
 
-/** Pose the rig at time t (seconds), or at rest while the run animation is off; then give it the body shape. */
+/** Pose the rig at time t (seconds), or at rest while the animation is off; then give it the body shape. */
 export function poseRun(t) {
   for (const bone of rig.order) bone.matrixAutoUpdate = true; // the shape and helpers of the last pose go
   if (options.run) {
-    const { local, hipOffset } = runPose(t, skeleton);
+    if (clip && clipStart == null) clipStart = t;
+    const { local, hipOffset } = clip ? clipPose(clip, t - clipStart, skeleton) : runPose(t, skeleton);
     for (const [name, q] of local) rig.bones.get(name)?.quaternion.set(q[0], q[1], q[2], q[3]);
     const hip = rig.bones.get('dsk_hip');
     if (hip) hip.position.copy(rig.rest.get(hip)).add(new THREE.Vector3(...hipOffset));
